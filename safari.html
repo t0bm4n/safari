@@ -337,6 +337,23 @@
 </head>
 <body>
 
+  <div id="start-screen" style="
+    position:fixed;
+    inset:0;
+    background:#0d1117;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    z-index:2000;
+    color:white;
+    font-family:system-ui;
+    text-align:center;
+  ">
+    <div style="font-size:48px; margin-bottom:20px;">🐘</div>
+    <div style="font-size:20px;">Tippe zum Starten</div>
+</div>
+
 <div id="loading-screen">
   <div class="loading-emoji">🐘</div>
   <div class="loading-text">Lade Safari...</div>
@@ -431,8 +448,11 @@ function lerpHex(a, b, t) {
 }
 
 function vibrate(duration = 10) {
-  if ('vibrate' in navigator) navigator.vibrate(duration);
+  // Safari, Firefox iOS: vibrate undefined
+  if (!navigator.vibrate) return;
+  navigator.vibrate(duration);
 }
+
 
 const previewCanvas = document.getElementById('preview-canvas');
 const pctx = previewCanvas.getContext('2d');
@@ -1174,28 +1194,62 @@ class GameScene extends Phaser.Scene {
     }
   }
 }
+let gameStarted = false;
 
-window.addEventListener('load', () => {
+// ✅ Start nach Benutzer-Tap (Audio + Spiel)
+async function startGameAfterUserTap() {
+  if (gameStarted) return;
+  gameStarted = true;
+
+  // ✅ Audio aktivieren
+  try {
+    const ctx = getAudioCtx();
+    const empty = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = empty;
+    src.connect(ctx.destination);
+    src.start(0);
+    console.log("Audio unlocked.");
+  } catch(e){ console.warn(e); }
+
+  // ✅ Hintergrundmusik starten
+  startBgMusic();
+
+  // ✅ Startscreen ausblenden
+  document.getElementById("start-screen").style.display = "none";
+
+  // ✅ Jetzt das Spiel starten
   initMergeBar();
   new Phaser.Game({
     type: Phaser.AUTO,
     width: W,
     height: H,
+    resolution: window.devicePixelRatio,
+    pixelArt: false,
+    roundPixels: false,
     backgroundColor: '#0d3a20',
     parent: 'phaser-container',
     physics: {
-      default: 'matter',
-      matter: {
-        gravity: { y: 0.9 },
-        debug: false,
-        enableSleeping: false,
-        positionIterations: 10,
-        velocityIterations: 10,
+        default: 'matter',
+        matter: {
+          gravity: { y: 0.9 },
+          debug: false,
+          enableSleeping: false,
+          positionIterations: 10,
+          velocityIterations: 10,
+        },
       },
-    },
     scene: [GameScene],
   });
-});
+
+}
+
+// ✅ User‑Interaktion → Spielstart
+window.addEventListener("touchstart", startGameAfterUserTap, { once: true });
+window.addEventListener("mousedown", startGameAfterUserTap, { once: true });
+
+// ✅ NICHTS MEHR HIER UNTEN!
+// ❌ KEIN window.onload für Spielstart!
 </script>
 </body>
 </html>
