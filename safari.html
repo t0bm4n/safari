@@ -35,6 +35,38 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
+  }
+
+  /* Dynamischer animierter Hintergrund */
+  #dynamic-bg {
+    position: fixed;
+    inset: -20%;
+    z-index: -1;
+    transition: background 1.2s ease;
+    filter: blur(100px);
+    opacity: 0.5;
+    animation: bgPulse 15s ease-in-out infinite;
+    background-size: 200% 200%;
+  }
+
+  @keyframes bgPulse {
+    0%, 100% { 
+      transform: scale(1) rotate(0deg);
+      opacity: 0.5;
+      background-position: 0% 50%;
+    }
+    25% {
+      background-position: 100% 50%;
+    }
+    50% { 
+      transform: scale(1.1) rotate(5deg);
+      opacity: 0.65;
+      background-position: 100% 100%;
+    }
+    75% {
+      background-position: 0% 100%;
+    }
   }
 
   #game-wrapper {
@@ -141,6 +173,7 @@
     display: block;
     box-shadow: 0 24px 64px rgba(0,0,0,0.6);
     touch-action: none;
+    border: 2px solid rgba(255,255,255,0.15);
   }
 
   /* Menü-Overlay */
@@ -337,10 +370,15 @@
 </head>
 <body>
 
+  <!-- Dynamischer animierter Hintergrund -->
+  <div id="dynamic-bg"></div>
+
   <div id="start-screen" style="
     position:fixed;
     inset:0;
-    background:#0d1117;
+    background:rgba(13,17,23,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -352,6 +390,7 @@
   ">
     <div style="font-size:48px; margin-bottom:20px;">🐘</div>
     <div style="font-size:20px;">Tippe zum Starten</div>
+    <div id="version-display" style="position:absolute; bottom:20px; font-size:12px; opacity:0.5;"></div>
 </div>
 
 <div id="loading-screen">
@@ -389,6 +428,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
 
 <script>
+// ========================================
+// VERSIONSNUMMER
+// ========================================
+const VERSION = "0.0.1";
+
+// ========================================
+// SOUND-KONFIGURATION
+// ========================================
+const SOUND_FOLDER = "./sounds/"; // Ordner für Sound-Dateien (kann angepasst werden)
+
+// Sound-Dateipfade (können durch eigene Audio-Dateien ersetzt werden)
+const SOUND_FILES = {
+  bgMusic: SOUND_FOLDER + "background.mp3",      // Hintergrundmusik
+  drop: SOUND_FOLDER + "drop.mp3",               // Ball-Drop Sound
+  merge: SOUND_FOLDER + "merge.mp3",             // Merge Sound
+  fanfare: SOUND_FOLDER + "fanfare.mp3",         // Gewinn-Fanfare
+  elephantWin: SOUND_FOLDER + "elephant.mp3",    // Elefanten-Sound bei Gewinn
+};
+
+// Fallback auf Default-Sounds , falls keine lokalen Dateien vorhanden
+const USE_DEFAULT_SOUNDS = true; // Auf false setzen, wenn eigene Sound-Dateien verwendet werden
+
+// ========================================
+// SPIEL-KONFIGURATION
+// ========================================
 // Dynamische Größe
 function getGameSize() {
   const maxWidth = Math.min(window.innerWidth - 20, 480);
@@ -479,6 +543,23 @@ function drawPreview(type) {
 
 function updateScore(score) {
   document.getElementById('score-val').textContent = score;
+  updateDynamicBackground(score);
+}
+
+function updateDynamicBackground(score) {
+  const bg = document.getElementById('dynamic-bg');
+  if (!bg) return;
+  
+  const biome = BIOMES[getBiomeIndex(score)];
+  
+  // Erstelle einen radialen Gradient basierend auf den Biome-Farben
+  const gradient = `radial-gradient(ellipse at 50% 50%, 
+    ${biome.sky[0]} 0%, 
+    ${biome.sky[1]} 40%, 
+    ${biome.hills} 70%, 
+    ${biome.plants} 100%)`;
+  
+  bg.style.background = gradient;
 }
 
 const mergeBar = document.getElementById('merge-bar');
@@ -667,6 +748,33 @@ function playFanfare() {
   } catch(_) {}
 }
 
+function playElephantSound() {
+  if (muted) return;
+  try {
+    const ctx = getAudioCtx();
+    // Elefanten-Trompeten-Sound: Tiefer Start, dann hoch
+    const times = [
+      { f: 180, t: 0.0, dur: 0.3 },
+      { f: 220, t: 0.3, dur: 0.25 },
+      { f: 380, t: 0.55, dur: 0.4 },
+    ];
+    times.forEach(({ f, t, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); 
+      gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      const start = ctx.currentTime + t;
+      osc.frequency.setValueAtTime(f, start);
+      osc.frequency.exponentialRampToValueAtTime(f * 1.5, start + dur);
+      gain.gain.setValueAtTime(0.25, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.start(start);
+      osc.stop(start + dur);
+    });
+  } catch (_) {}
+}
+
 class Background {
   constructor(scene) {
     this.off = document.createElement('canvas');
@@ -807,8 +915,13 @@ class BallManager {
     const now = Date.now();
     for (const b of this.balls) {
       if (!b.body || now - b.body._spawnTime < 1500) continue;
-      const top = b.body.position.y - ANIMALS[b.body._type].r;
-      if (top < GAME_OVER_LINE && Math.hypot(b.body.velocity.x, b.body.velocity.y) < 0.5) return true;
+      const ballRadius = ANIMALS[b.body._type].r;
+      const ballCenter = b.body.position.y;
+      const ballTop = ballCenter - ballRadius;
+      const ballHalfway = ballCenter - (ballRadius / 2); // 50% des Balls
+      
+      // Game Over nur wenn der Ball zu 50% über der Linie ist
+      if (ballHalfway < GAME_OVER_LINE && Math.hypot(b.body.velocity.x, b.body.velocity.y) < 0.5) return true;
     }
     return false;
   }
@@ -1103,6 +1216,9 @@ class GameScene extends Phaser.Scene {
     this.effects.spawnWinEffect(W / 2, H / 2);
 
     this.time.delayedCall(1200, () => {
+      // Elefanten-Sound abspielen, wenn der Screen erscheint
+      playElephantSound();
+      
       const overlay = this.add.graphics().setDepth(15);
       overlay.fillStyle(0x000000, 0.5);
       overlay.fillRect(0, 0, W, H);
@@ -1248,8 +1364,17 @@ async function startGameAfterUserTap() {
 window.addEventListener("touchstart", startGameAfterUserTap, { once: true });
 window.addEventListener("mousedown", startGameAfterUserTap, { once: true });
 
-// ✅ NICHTS MEHR HIER UNTEN!
-// ❌ KEIN window.onload für Spielstart!
+// Versionsnummer im Startscreen anzeigen
+window.addEventListener("DOMContentLoaded", () => {
+  const versionDisplay = document.getElementById("version-display");
+  if (versionDisplay) {
+    versionDisplay.textContent = `Version ${VERSION}`;
+  }
+  
+  // Initialisiere den dynamischen Hintergrund
+  updateDynamicBackground(0);
+});
+
 </script>
 </body>
 </html>
