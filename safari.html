@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -29,7 +29,7 @@
   }
 
   body {
-    background: #0d1117;
+    background: #082b18;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     display: flex;
     flex-direction: column;
@@ -38,7 +38,6 @@
     position: relative;
   }
 
-  /* Dynamischer animierter Hintergrund */
   #dynamic-bg {
     position: fixed;
     inset: -20%;
@@ -56,17 +55,13 @@
       opacity: 0.5;
       background-position: 0% 50%;
     }
-    25% {
-      background-position: 100% 50%;
-    }
+    25% { background-position: 100% 50%; }
     50% { 
       transform: scale(1.1) rotate(5deg);
       opacity: 0.65;
       background-position: 100% 100%;
     }
-    75% {
-      background-position: 0% 100%;
-    }
+    75% { background-position: 0% 100%; }
   }
 
   #game-wrapper {
@@ -176,7 +171,6 @@
     border: 2px solid rgba(255,255,255,0.15);
   }
 
-  /* Menü-Overlay */
   #menu-overlay {
     display: none;
     position: fixed;
@@ -205,7 +199,7 @@
     display: flex;
     flex-direction: column;
     gap: min(3.3vw, 14px);
-    min-width: min(52.4vw, 220px);
+    min-width: min(80vw, 320px);
     color: #fff;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     animation: slideUp 0.3s ease;
@@ -267,6 +261,55 @@
 
   #menu-close:active { opacity: 0.8; }
 
+  .cat-section-label {
+    font-size: min(2.6vw, 11px);
+    opacity: 0.45;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: -4px;
+  }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: min(1.4vw, 6px);
+  }
+
+  .cat-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: min(1.9vw, 8px) min(1vw, 4px);
+    border-radius: min(2vw, 8px);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: all 0.15s;
+    touch-action: manipulation;
+    min-height: 54px;
+  }
+
+  .cat-btn.active {
+    border-color: rgba(255,220,80,0.8);
+    background: rgba(255,220,80,0.14);
+    box-shadow: 0 0 10px rgba(255,220,80,0.2);
+  }
+
+  .cat-btn:active { transform: scale(0.94); }
+
+  .cat-btn .cat-icon { font-size: min(5.7vw, 22px); line-height: 1; }
+
+  .cat-btn .cat-label {
+    font-size: min(2vw, 8px);
+    opacity: 0.65;
+    text-align: center;
+    line-height: 1.1;
+    color: #fff;
+  }
+
+  .cat-btn.active .cat-label { opacity: 1; color: #ffd700; }
+
   #merge-bar {
     width: min(100vw - 20px, 420px);
     background: rgba(255,255,255,0.06);
@@ -293,15 +336,15 @@
 
   .merge-cell canvas {
     border-radius: 50%;
-    transition: box-shadow 0.3s, transform 0.3s;
+    transition: box-shadow 0.15s, transform 0.3s;
     display: block;
     width: 100%;
     height: auto;
   }
 
   .merge-cell.just-merged canvas {
-    box-shadow: 0 0 12px 4px rgba(255,220,80,0.85);
     transform: scale(1.18);
+    /* box-shadow wird per JS in der Tier-Farbe gesetzt, kein Override hier */
   }
 
   .merge-arrow {
@@ -317,11 +360,10 @@
 
   .merge-cell:last-child .merge-arrow { display: none; }
 
-  /* Loading Screen */
   #loading-screen {
     position: fixed;
     inset: 0;
-    background: linear-gradient(135deg, #0d1117 0%, #1a2332 100%);
+    background: linear-gradient(135deg, #082b18 0%, #0d5c2e 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -352,7 +394,6 @@
     opacity: 0.7;
   }
 
-  /* Responsive */
   @media (max-width: 375px) {
     #game-wrapper { gap: 8px; }
   }
@@ -370,27 +411,47 @@
 </head>
 <body>
 
-  <!-- Dynamischer animierter Hintergrund -->
-  <div id="dynamic-bg"></div>
+<div id="dynamic-bg"></div>
 
-  <div id="start-screen" style="
-    position:fixed;
-    inset:0;
-    background:rgba(13,17,23,0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    z-index:2000;
-    color:white;
-    font-family:system-ui;
-    text-align:center;
-  ">
-    <div style="font-size:48px; margin-bottom:20px;">🐘</div>
-    <div style="font-size:20px;">Tippe zum Starten</div>
-    <div id="version-display" style="position:absolute; bottom:20px; font-size:12px; opacity:0.5;"></div>
+<div id="start-screen" style="
+  position:fixed;
+  inset:0;
+  background:rgba(8,43,24,0.90);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:2000;
+  color:white;
+  font-family:system-ui;
+  text-align:center;
+  gap: 18px;
+  padding: 24px;
+">
+  <div style="font-size:52px; line-height:1;">🐘</div>
+  <div style="font-size:22px; font-weight:700; letter-spacing:0.5px;">Tier-Merge Safari</div>
+
+  <div style="width:100%; max-width:340px;">
+    <div style="font-size:11px; opacity:0.45; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Wähle deine Kategorie</div>
+    <div id="start-cat-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:7px;"></div>
+  </div>
+
+  <div id="start-btn" style="
+    margin-top:6px;
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.25);
+    border-radius: 14px;
+    padding: 13px 38px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    touch-action: manipulation;
+  ">Tippe zum Starten ▶</div>
+
+  <div id="version-display" style="font-size:11px; opacity:0.35;"></div>
 </div>
 
 <div id="loading-screen">
@@ -418,6 +479,8 @@
       <h2>Menü</h2>
       <button class="menu-btn" id="menu-restart">🔄&nbsp; Neu starten</button>
       <button class="menu-btn" id="menu-mute">🔊&nbsp; Sound an</button>
+      <div class="cat-section-label">Emoji-Kategorie</div>
+      <div id="menu-cat-grid" class="cat-grid"></div>
       <div id="menu-close">✕ schließen</div>
     </div>
   </div>
@@ -431,29 +494,236 @@
 // ========================================
 // VERSIONSNUMMER
 // ========================================
-const VERSION = "0.0.1";
+const VERSION = "0.0.2";
 
 // ========================================
 // SOUND-KONFIGURATION
 // ========================================
-const SOUND_FOLDER = "./sounds/"; // Ordner für Sound-Dateien (kann angepasst werden)
+const SOUND_FOLDER = "./sounds/";
 
-// Sound-Dateipfade (können durch eigene Audio-Dateien ersetzt werden)
 const SOUND_FILES = {
-  bgMusic: SOUND_FOLDER + "background.mp3",      // Hintergrundmusik
-  drop: SOUND_FOLDER + "drop.mp3",               // Ball-Drop Sound
-  merge: SOUND_FOLDER + "merge.mp3",             // Merge Sound
-  fanfare: SOUND_FOLDER + "fanfare.mp3",         // Gewinn-Fanfare
-  elephantWin: SOUND_FOLDER + "elephant.mp3",    // Elefanten-Sound bei Gewinn
+  bgMusic:     SOUND_FOLDER + "loop_1.mp3",
+  drop:        SOUND_FOLDER + "drop.mp3",
+  merge:       SOUND_FOLDER + "merge.mp3",
+  fanfare:     SOUND_FOLDER + "fanfare.mp3",
+  elephantWin: SOUND_FOLDER + "elephant.mp3",
 };
 
-// Fallback auf Default-Sounds , falls keine lokalen Dateien vorhanden
-const USE_DEFAULT_SOUNDS = true; // Auf false setzen, wenn eigene Sound-Dateien verwendet werden
+// Auf true setzen, um die eingebauten Synth-Sounds zu nutzen (ohne Dateien)
+const USE_DEFAULT_SOUNDS = false;
+
+// ========================================
+// MUSIK-KONFIGURATION
+// ========================================
+const DEFAULT_MUSIC_TRACK = 3;
+
+const MUSIC_TRACKS = {
+  1: {
+    notes:    [261, 311, 392, 466, 392, 311],
+    interval: 850,
+    type:     'triangle',
+    vol:      0.055,
+    duration: 1.3,
+  },
+  2: {
+    notes:    [330, 392, 440, 523, 440, 392, 330, 294],
+    interval: 600,
+    type:     'sine',
+    vol:      0.07,
+    duration: 0.9,
+  },
+  3: {
+    notes:    [196, 220, 262, 196, 175, 220, 262, 294, 262],
+    interval: 1100,
+    type:     'triangle',
+    vol:      0.06,
+    duration: 1.8,
+  },
+};
+
+// ========================================
+// AUDIO — einziges, zentrales System
+// ========================================
+let muted = false;
+let audioCtx = null;
+let bgMusicTimer = null;
+
+const BG_NOTES    = MUSIC_TRACKS[DEFAULT_MUSIC_TRACK].notes;
+const BG_INTERVAL = MUSIC_TRACKS[DEFAULT_MUSIC_TRACK].interval;
+const BG_TYPE     = MUSIC_TRACKS[DEFAULT_MUSIC_TRACK].type;
+const BG_VOL      = MUSIC_TRACKS[DEFAULT_MUSIC_TRACK].vol;
+const BG_DURATION = MUSIC_TRACKS[DEFAULT_MUSIC_TRACK].duration;
+let bgStep = 0;
+
+// Audio-Buffer-Cache für geladene Sound-Dateien
+const _audioBuffers = {};
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+async function _loadAudioBuffer(key, url) {
+  if (_audioBuffers[key]) return _audioBuffers[key];
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('not found');
+    const arr = await resp.arrayBuffer();
+    const ctx = getAudioCtx();
+    _audioBuffers[key] = await ctx.decodeAudioData(arr);
+    return _audioBuffers[key];
+  } catch (e) {
+    console.warn(`Sound-Datei "${url}" nicht gefunden, nutze Synth-Fallback.`);
+    return null;
+  }
+}
+
+function _playBuffer(buffer, vol = 0.8) {
+  if (!buffer || muted) return;
+  try {
+    const ctx = getAudioCtx();
+    const src  = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    src.buffer = buffer;
+    gain.gain.value = vol;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start(0);
+  } catch (_) {}
+}
+
+function playTone(freq, type = 'sine', duration = 0.2, vol = 0.15, endFreq = null) {
+  if (muted) return;
+  try {
+    const ctx  = getAudioCtx();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + duration);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch (_) {}
+}
+
+function scheduleBgNote() {
+  if (muted) { bgMusicTimer = null; return; }
+  playTone(BG_NOTES[bgStep % BG_NOTES.length], BG_TYPE, BG_DURATION, BG_VOL);
+  bgStep++;
+  bgMusicTimer = setTimeout(scheduleBgNote, BG_INTERVAL);
+}
+
+function startBgMusic() {
+  if (bgMusicTimer) return;
+  scheduleBgNote();
+}
+
+function stopBgMusic() {
+  if (bgMusicTimer) { clearTimeout(bgMusicTimer); bgMusicTimer = null; }
+}
+
+function playDropSound() {
+  if (USE_DEFAULT_SOUNDS) {
+    playTone(180, 'sine', 0.14, 0.09, 95);
+    return;
+  }
+  _loadAudioBuffer('drop', SOUND_FILES.drop).then(buf => {
+    if (buf) _playBuffer(buf, 0.5);
+    else     playTone(180, 'sine', 0.14, 0.09, 95);
+  });
+}
+
+function playMergeSound(level) {
+  if (USE_DEFAULT_SOUNDS) {
+    playTone(280 + level * 90, 'sine', 0.28, 0.22, 500 + level * 80);
+    setTimeout(() => playTone(400 + level * 60, 'triangle', 0.12, 0.15), 40);
+    return;
+  }
+  _loadAudioBuffer('merge', SOUND_FILES.merge).then(buf => {
+    if (buf) _playBuffer(buf, 0.7);
+    else {
+      playTone(280 + level * 90, 'sine', 0.28, 0.22, 500 + level * 80);
+      setTimeout(() => playTone(400 + level * 60, 'triangle', 0.12, 0.15), 40);
+    }
+  });
+}
+
+function playFanfare() {
+  if (muted) return;
+  try {
+    const ctx = getAudioCtx();
+    const melody = [
+      { f: 523,  t: 0.00 }, { f: 659,  t: 0.12 }, { f: 784,  t: 0.24 },
+      { f: 1047, t: 0.36 }, { f: 1319, t: 0.52 }, { f: 1568, t: 0.68 },
+      { f: 523,  t: 0.95 }, { f: 659,  t: 0.95 }, { f: 784,  t: 0.95 }, { f: 1047, t: 0.95 },
+    ];
+    melody.forEach(({ f, t }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.value = f;
+      const start = ctx.currentTime + t;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.18, start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+      osc.start(start);
+      osc.stop(start + 0.5);
+    });
+    const toot  = ctx.createOscillator();
+    const tgain = ctx.createGain();
+    toot.connect(tgain);
+    tgain.connect(ctx.destination);
+    toot.type = 'sawtooth';
+    toot.frequency.setValueAtTime(300, ctx.currentTime + 0.9);
+    toot.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 1.4);
+    toot.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 1.7);
+    tgain.gain.setValueAtTime(0.22, ctx.currentTime + 0.9);
+    tgain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+    toot.start(ctx.currentTime + 0.9);
+    toot.stop(ctx.currentTime + 1.9);
+  } catch (_) {}
+}
+
+function playElephantSound() {
+  if (muted) return;
+  try {
+    const ctx = getAudioCtx();
+    [
+      { f: 180, t: 0.0,  dur: 0.3  },
+      { f: 220, t: 0.3,  dur: 0.25 },
+      { f: 380, t: 0.55, dur: 0.4  },
+    ].forEach(({ f, t, dur }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      const start = ctx.currentTime + t;
+      osc.frequency.setValueAtTime(f, start);
+      osc.frequency.exponentialRampToValueAtTime(f * 1.5, start + dur);
+      gain.gain.setValueAtTime(0.25, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.start(start);
+      osc.stop(start + dur);
+    });
+  } catch (_) {}
+}
+
+// ========================================
+// TIER-DROP-LIMIT
+// ========================================
+const MAX_DROP_ANIMAL_INDEX = 2;
 
 // ========================================
 // SPIEL-KONFIGURATION
 // ========================================
-// Dynamische Größe
 function getGameSize() {
   const maxWidth = Math.min(window.innerWidth - 20, 480);
   const W = Math.min(maxWidth, 420);
@@ -463,35 +733,91 @@ function getGameSize() {
 
 let { W, H } = getGameSize();
 const GAME_OVER_LINE = Math.floor(H * (85 / 580));
-const DROP_Y_OFFSET = Math.floor(H * (8 / 580));
+const DROP_Y_OFFSET  = Math.floor(H * (8 / 580));
+const SCALE_FACTOR   = W / 420;
 
-const ANIMALS = [
-  { emoji: '🐭', r: 18,  color: 0xe8e8e8 },
-  { emoji: '🐰', r: 26,  color: 0xffaadd },
-  { emoji: '🦊', r: 34,  color: 0xffbb77 },
-  { emoji: '🐵', r: 42,  color: 0xffdd88 },
-  { emoji: '🐶', r: 50,  color: 0xaaffaa },
-  { emoji: '🐱', r: 58,  color: 0x88eeff },
-  { emoji: '🐻', r: 67,  color: 0xaaccdd },
-  { emoji: '🐯', r: 76,  color: 0xffddaa },
-  { emoji: '🦁', r: 86,  color: 0xddddf8 },
-  { emoji: '🐘', r: 98,  color: 0xcc99ff },
-];
+// ========================================
+// EMOJI-KATEGORIEN
+// ========================================
+const EMOJI_CATEGORIES = {
+  zoo: {
+    label:  'Zoo-Tiere',
+    icon:   '🐘',
+    emojis: ['🐭','🐰','🦊','🐵','🐶','🐱','🐻','🐯','🦁','🐘'],
+    colors: [0xe8e8e8, 0xffaadd, 0xffbb77, 0xffdd88, 0xaaffaa, 0x88eeff, 0xaaccdd, 0xffddaa, 0xddddf8, 0xcc99ff],
+  },
+  ocean: {
+    label:  'Meerestiere',
+    icon:   '🐳',
+    emojis: ['🦐','🐚','🦀','🐡','🐠','🐟','🦑','🐙','🦈','🐳'],
+    colors: [0xffccaa, 0xffe0c8, 0xff8866, 0xffdd44, 0xff8822, 0x44aaff, 0xcc88ff, 0xff6699, 0x6688cc, 0x4488ff],
+  },
+  farm: {
+    label:  'Bauernhof',
+    icon:   '🐄',
+    emojis: ['🐣','🐤','🐇','🐑','🐐','🐖','🦆','🐄','🐴','🐎'],
+    colors: [0xffee88, 0xffdd44, 0xffffff, 0xeeddcc, 0xbbddaa, 0xffbbaa, 0x88ccff, 0xccaa66, 0xddbb88, 0xcc9944],
+  },
+  bugs: {
+    label:  'Insekten',
+    icon:   '🦋',
+    emojis: ['🐛','🐌','🐜','🐝','🦟','🦗','🪲','🦎','🐸','🦋'],
+    colors: [0x88cc44, 0xbbaa66, 0x554422, 0xffcc00, 0x88aacc, 0x556644, 0x884422, 0x66aa44, 0x44cc66, 0xff88cc],
+  },
+  space: {
+    label:  'Weltraum',
+    icon:   '🚀',
+    emojis: ['⭐','🌙','💫','☄️','🪐','🌍','🌟','🛸','🚀','🌌'],
+    colors: [0xffdd44, 0xccaaff, 0xffffaa, 0xff8844, 0xddaaff, 0x44aaff, 0xffff66, 0x88ffdd, 0xff6644, 0x8844ff],
+  },
+  food: {
+    label:  'Essen',
+    icon:   '🍕',
+    emojis: ['🍇','🍓','🍔','🍩','🌮','🍕','🍜','🍣','🎂','🍦'],
+    // Pastell-Töne: erkennbar aber nicht zu kräftig
+    colors: [0xddaaee, 0xffaaaa, 0xddaa88, 0xffddaa, 0xffeebb, 0xffbbaa, 0xffeecc, 0xffcccc, 0xffccdd, 0xffffff],
+  },
+  sports: {
+    label:  'Sport',
+    icon:   '⚽',
+    emojis: ['🏓','🎾','⚽','🏀','🎱','🏈','🥊','🏆','🎯','👑'],
+    // Aufgehellt, dunkle Farben (0x111111) vermieden
+    colors: [0xf0f0f0, 0xffee88, 0xeeeeee, 0xffcc99, 0xcccccc, 0xddbb88, 0xffaaaa, 0xffdd88, 0xffaaaa, 0xffee88],
+  },
+  fantasy: {
+    label:  'Fantasy',
+    icon:   '🐉',
+    emojis: ['🍄','🔮','🧿','⚡','🌈','🦄','🧨','🐉','👁️','💎'],
+    // Pastellisiert, war zu kräftig
+    colors: [0xffaaaa, 0xccaaff, 0xaabbff, 0xffeeaa, 0xffccdd, 0xffccff, 0xffaaaa, 0xaaeedd, 0xccddff, 0xaaffff],
+  },
+};
 
-const SCALE_FACTOR = W / 420;
-ANIMALS.forEach(a => a.r = Math.floor(a.r * SCALE_FACTOR));
+let activeCategory = 'zoo';
+
+function getAnimalsForCategory(catKey) {
+  const cat    = EMOJI_CATEGORIES[catKey];
+  const radii  = [18, 26, 34, 42, 50, 58, 67, 76, 86, 98];
+  return cat.emojis.map((emoji, i) => ({
+    emoji,
+    r:     Math.floor(radii[i] * SCALE_FACTOR),
+    color: cat.colors[i],
+  }));
+}
+
+let ANIMALS = getAnimalsForCategory('zoo');
 
 const BIOMES = [
-  { from: 0,   sky: ['#52c8a0','#0d4a30'], hills: '#1a3d2a', plants: '#27ae60' },
-  { from: 60,  sky: ['#ffd97d','#c0720d'], hills: '#a0621a', plants: '#e67e22' },
-  { from: 160, sky: ['#7ec8e3','#0f3a6e'], hills: '#1a5276', plants: '#2eaab5' },
-  { from: 300, sky: ['#c39bd3','#2c0050'], hills: '#4a235a', plants: '#9b59b6' },
+  { from: 0,   sky: ['#4db87a','#0a3d22'], hills: '#0d5c2e', plants: '#1e8c4a', bgColor: '#082b18' },
+  { from: 50,  sky: ['#f5c842','#c47a1e'], hills: '#a85c10', plants: '#d4843a', bgColor: '#6b3a08' },
+  { from: 110, sky: ['#3ab8d4','#084870'], hills: '#0a5e8a', plants: '#1590b8', bgColor: '#052d48' },
+  { from: 190, sky: ['#e85c20','#5a1408'], hills: '#7a1c10', plants: '#c43a18', bgColor: '#350a06' },
+  { from: 280, sky: ['#b8d8f0','#4a7aaa'], hills: '#5a8ec0', plants: '#8ab8dc', bgColor: '#2a4e78' },
+  { from: 380, sky: ['#f5b8c8','#c86890'], hills: '#9e4870', plants: '#e090b0', bgColor: '#6a2848' },
+  { from: 500, sky: ['#2a1e5c','#0a0818'], hills: '#1a1040', plants: '#3a2880', bgColor: '#050310' },
 ];
 
-let muted = false;
-let bgMusicTimer = null;
-
-function randNext() { return Math.floor(Math.random() * 5); }
+function randNext() { return Math.floor(Math.random() * (MAX_DROP_ANIMAL_INDEX + 1)); }
 
 function getBiomeIndex(score) {
   for (let i = BIOMES.length - 1; i >= 0; i--)
@@ -501,38 +827,39 @@ function getBiomeIndex(score) {
 
 function hexToRgb(hex) {
   const n = parseInt(hex.replace('#',''), 16);
-  return [(n>>16)&255, (n>>8)&255, n&255];
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 function lerpHex(a, b, t) {
-  const [ar,ag,ab] = hexToRgb(a);
-  const [br,bg,bb] = hexToRgb(b);
-  const lerp = (x,y) => Math.round(Math.max(0, Math.min(255, x + (y-x)*t)));
-  return '#' + [lerp(ar,br), lerp(ag,bg), lerp(ab,bb)].map(v => v.toString(16).padStart(2,'0')).join('');
+  const [ar, ag, ab] = hexToRgb(a);
+  const [br, bg, bb] = hexToRgb(b);
+  const lerp = (x, y) => Math.round(Math.max(0, Math.min(255, x + (y - x) * t)));
+  return '#' + [lerp(ar, br), lerp(ag, bg), lerp(ab, bb)]
+    .map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
 function vibrate(duration = 10) {
-  // Safari, Firefox iOS: vibrate undefined
   if (!navigator.vibrate) return;
   navigator.vibrate(duration);
 }
 
-
+// ========================================
+// PREVIEW-CANVAS
+// ========================================
 const previewCanvas = document.getElementById('preview-canvas');
 const pctx = previewCanvas.getContext('2d');
 
 function drawPreview(type) {
   pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-  const a = ANIMALS[type];
-  const r = Math.min(a.r, 21 * SCALE_FACTOR);
+  const a  = ANIMALS[type];
+  const r  = Math.min(a.r, 21 * SCALE_FACTOR);
   const cx = previewCanvas.width / 2;
   const cy = previewCanvas.height / 2;
-  
   pctx.save();
   pctx.translate(cx, cy);
   pctx.beginPath();
-  pctx.arc(0, 0, r, 0, Math.PI*2);
-  pctx.fillStyle = '#' + a.color.toString(16).padStart(6,'0');
+  pctx.arc(0, 0, r, 0, Math.PI * 2);
+  pctx.fillStyle = '#' + a.color.toString(16).padStart(6, '0');
   pctx.fill();
   pctx.font = `${Math.floor(r * 1.35)}px serif`;
   pctx.textAlign = 'center';
@@ -541,46 +868,68 @@ function drawPreview(type) {
   pctx.restore();
 }
 
+// ========================================
+// SCORE & HINTERGRUND
+// ========================================
 function updateScore(score) {
   document.getElementById('score-val').textContent = score;
-  updateDynamicBackground(score);
+  _bgTargetBiomeIdx = getBiomeIndex(score);
 }
 
-function updateDynamicBackground(score) {
+// Ziel-Biome (wird per Score gesetzt, Lerp läuft im Render-Loop)
+let _bgTargetBiomeIdx = 0;
+let _bgBodyColor      = BIOMES[0].bgColor;
+
+// Wird jeden Frame aus Background.draw() aufgerufen → body-bg & Canvas-Biome sind synchron
+function tickBodyBackground(speed) {
+  const tgt = BIOMES[_bgTargetBiomeIdx];
+  _bgBodyColor = lerpHex(_bgBodyColor, tgt.bgColor, speed);
+  document.body.style.background = _bgBodyColor;
   const bg = document.getElementById('dynamic-bg');
-  if (!bg) return;
-  
-  const biome = BIOMES[getBiomeIndex(score)];
-  
-  // Erstelle einen radialen Gradient basierend auf den Biome-Farben
-  const gradient = `radial-gradient(ellipse at 50% 50%, 
-    ${biome.sky[0]} 0%, 
-    ${biome.sky[1]} 40%, 
-    ${biome.hills} 70%, 
-    ${biome.plants} 100%)`;
-  
-  bg.style.background = gradient;
+  if (bg) {
+    bg.style.background = `radial-gradient(ellipse at 40% 40%, 
+      ${tgt.sky[0]} 0%, 
+      ${tgt.sky[1]} 45%, 
+      ${tgt.hills} 75%, 
+      ${tgt.plants} 100%)`;
+  }
 }
 
-const mergeBar = document.getElementById('merge-bar');
+// Einmalig beim Start aufrufen (kein Lerp, sofortiger Sprung)
+function updateDynamicBackground(score) {
+  _bgTargetBiomeIdx = getBiomeIndex(score);
+  _bgBodyColor = BIOMES[_bgTargetBiomeIdx].bgColor;
+  document.body.style.background = _bgBodyColor;
+  const bg = document.getElementById('dynamic-bg');
+  if (bg) {
+    const b = BIOMES[_bgTargetBiomeIdx];
+    bg.style.background = `radial-gradient(ellipse at 40% 40%, 
+      ${b.sky[0]} 0%, ${b.sky[1]} 45%, ${b.hills} 75%, ${b.plants} 100%)`;
+  }
+}
+
+// ========================================
+// MERGE-BAR
+// ========================================
+const mergeBar   = document.getElementById('merge-bar');
 const mergeCells = [];
-let flashTimers = {};
+const flashTimers = {};
 
 function initMergeBar() {
   mergeBar.innerHTML = '';
   mergeCells.length = 0;
 
-  const barWidth = mergeBar.offsetWidth;
-  const cellSize = Math.floor((barWidth - 20 - 9 * 3) / 10);
+  const barWidth  = mergeBar.offsetWidth;
+  const cellSize  = Math.floor((barWidth - 20 - 9 * 3) / 10);
 
   ANIMALS.forEach((a, i) => {
     const cell = document.createElement('div');
     cell.className = 'merge-cell';
     cell.id = 'mc-' + i;
 
-    const cv = document.createElement('canvas');
-    cv.width  = cellSize;
-    cv.height = cellSize;
+    const cv    = document.createElement('canvas');
+    cv.width    = cellSize;
+    cv.height   = cellSize;
 
     const arrow = document.createElement('span');
     arrow.className = 'merge-arrow';
@@ -592,20 +941,20 @@ function initMergeBar() {
 
     const ctx = cv.getContext('2d');
     mergeCells.push({ canvas: cv, ctx, cell, size: cellSize });
-
     drawMergeCell(i, cellSize, ctx);
   });
 }
 
 function drawMergeCell(i, size, ctx) {
-  const a = ANIMALS[i];
-  const cx = size / 2, cy = size / 2;
-  const r = size * 0.42;
+  const a  = ANIMALS[i];
+  const cx = size / 2;
+  const cy = size / 2;
+  const r  = size * 0.42;
 
   ctx.clearRect(0, 0, size, size);
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI*2);
-  ctx.fillStyle = '#' + a.color.toString(16).padStart(6,'0');
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#' + a.color.toString(16).padStart(6, '0');
   ctx.fill();
 
   const fontSize = Math.round(r * 1.6);
@@ -620,66 +969,26 @@ function drawMergeCell(i, size, ctx) {
 }
 
 function flashMergeCell(i) {
-  const { cell } = mergeCells[i];
+  const { cell, canvas } = mergeCells[i];
+  // Farbe des gemergten Tieres als Glow-Farbe nutzen
+  const color = ANIMALS[i].color;
+  const r = (color >> 16) & 0xff;
+  const g = (color >> 8)  & 0xff;
+  const b =  color        & 0xff;
+  canvas.style.boxShadow = `0 0 12px 5px rgba(${r},${g},${b},0.95)`;
+  canvas.style.transform = 'scale(1.18)';
   cell.classList.add('just-merged');
   if (flashTimers[i]) clearTimeout(flashTimers[i]);
-  flashTimers[i] = setTimeout(() => cell.classList.remove('just-merged'), 600);
+  flashTimers[i] = setTimeout(() => {
+    cell.classList.remove('just-merged');
+    canvas.style.boxShadow = '';
+    canvas.style.transform = '';
+  }, 600);
 }
 
-let audioCtx = null;
-
-function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-
-function playTone(freq, type, duration, vol, freqEnd) {
-  if (muted) return;
-  try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, ctx.currentTime + duration);
-    gain.gain.setValueAtTime(vol, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + duration);
-  } catch(_) {}
-}
-
-function playMergeSound(level) {
-  playTone(280 + level * 90, 'sine', 0.22, 0.28, 500 + level * 80);
-  setTimeout(() => playTone(400 + level * 60, 'triangle', 0.15, 0.12), 40);
-}
-
-function playDropSound() {
-  playTone(180, 'sine', 0.09, 0.14, 95);
-}
-
-const BG_NOTES = [261, 311, 392, 466, 392, 311];
-let bgStep = 0;
-
-function scheduleBgNote() {
-  if (muted) { bgMusicTimer = null; return; }
-  playTone(BG_NOTES[bgStep % BG_NOTES.length], 'triangle', 1.3, 0.055);
-  bgStep++;
-  bgMusicTimer = setTimeout(scheduleBgNote, 850);
-}
-
-function startBgMusic() {
-  if (bgMusicTimer) return;
-  scheduleBgNote();
-}
-
-function stopBgMusic() {
-  if (bgMusicTimer) { clearTimeout(bgMusicTimer); bgMusicTimer = null; }
-}
-
+// ========================================
+// MENÜ
+// ========================================
 const menuOverlay = document.getElementById('menu-overlay');
 const menuMuteBtn = document.getElementById('menu-mute');
 
@@ -693,7 +1002,7 @@ document.getElementById('menu-close').onclick = () => {
   menuOverlay.classList.remove('open');
 };
 
-menuOverlay.addEventListener('click', e => { 
+menuOverlay.addEventListener('click', e => {
   if (e.target === menuOverlay) {
     vibrate(10);
     menuOverlay.classList.remove('open');
@@ -709,98 +1018,41 @@ menuMuteBtn.onclick = () => {
   vibrate(10);
   muted = !muted;
   updateMuteLabel();
-  muted ? stopBgMusic() : startBgMusic();
+  if (muted) stopBgMusic();
+  else       startBgMusic();
 };
 
-function playFanfare() {
-  if (muted) return;
-  try {
-    const ctx = getAudioCtx();
-    const melody = [
-      { f: 523, t: 0.00 }, { f: 659, t: 0.12 }, { f: 784, t: 0.24 },
-      { f: 1047,t: 0.36 }, { f: 1319,t: 0.52 }, { f: 1568,t: 0.68 },
-      { f: 523, t: 0.95 }, { f: 659, t: 0.95 }, { f: 784, t: 0.95 }, { f: 1047, t: 0.95 },
-    ];
-    melody.forEach(({ f, t }) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'square';
-      osc.frequency.value = f;
-      const start = ctx.currentTime + t;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.18, start + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
-      osc.start(start);
-      osc.stop(start + 0.5);
-    });
-    const toot = ctx.createOscillator();
-    const tgain = ctx.createGain();
-    toot.connect(tgain); tgain.connect(ctx.destination);
-    toot.type = 'sawtooth';
-    toot.frequency.setValueAtTime(300, ctx.currentTime + 0.9);
-    toot.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 1.4);
-    toot.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 1.7);
-    tgain.gain.setValueAtTime(0.22, ctx.currentTime + 0.9);
-    tgain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
-    toot.start(ctx.currentTime + 0.9);
-    toot.stop(ctx.currentTime + 1.9);
-  } catch(_) {}
-}
-
-function playElephantSound() {
-  if (muted) return;
-  try {
-    const ctx = getAudioCtx();
-    // Elefanten-Trompeten-Sound: Tiefer Start, dann hoch
-    const times = [
-      { f: 180, t: 0.0, dur: 0.3 },
-      { f: 220, t: 0.3, dur: 0.25 },
-      { f: 380, t: 0.55, dur: 0.4 },
-    ];
-    times.forEach(({ f, t, dur }) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); 
-      gain.connect(ctx.destination);
-      osc.type = 'sawtooth';
-      const start = ctx.currentTime + t;
-      osc.frequency.setValueAtTime(f, start);
-      osc.frequency.exponentialRampToValueAtTime(f * 1.5, start + dur);
-      gain.gain.setValueAtTime(0.25, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
-      osc.start(start);
-      osc.stop(start + dur);
-    });
-  } catch (_) {}
-}
-
+// ========================================
+// PHASER SCENE KLASSEN
+// ========================================
 class Background {
   constructor(scene) {
-    this.off = document.createElement('canvas');
-    this.off.width = W; 
+    this.off     = document.createElement('canvas');
+    this.off.width  = W;
     this.off.height = H;
-    this.ctx = this.off.getContext('2d');
-    this.tex = scene.textures.createCanvas('bg', W, H);
-    this.img = scene.add.image(0, 0, 'bg').setOrigin(0, 0).setDepth(-10);
-    this.time = 0;
-    this.sky0 = BIOMES[0].sky[0];
-    this.sky1 = BIOMES[0].sky[1];
-    this.hills = BIOMES[0].hills;
-    this.plants = BIOMES[0].plants;
+    this.ctx     = this.off.getContext('2d');
+    this.tex     = scene.textures.createCanvas('bg', W, H);
+    this.img     = scene.add.image(0, 0, 'bg').setOrigin(0, 0).setDepth(-10);
+    this.time    = 0;
+    this.sky0    = BIOMES[0].sky[0];
+    this.sky1    = BIOMES[0].sky[1];
+    this.hills   = BIOMES[0].hills;
+    this.plants  = BIOMES[0].plants;
   }
 
   draw(score, delta) {
-    const dt = Math.min(delta, 50) / (1000/60);
+    const dt  = Math.min(delta, 50) / (1000 / 60);
     this.time += 0.004 * dt;
     const tgt = BIOMES[getBiomeIndex(score)];
     const spd = 0.012 * dt;
-    this.sky0 = lerpHex(this.sky0, tgt.sky[0], spd);
-    this.sky1 = lerpHex(this.sky1, tgt.sky[1], spd);
-    this.hills = lerpHex(this.hills, tgt.hills, spd);
+    this.sky0   = lerpHex(this.sky0,  tgt.sky[0],  spd);
+    this.sky1   = lerpHex(this.sky1,  tgt.sky[1],  spd);
+    this.hills  = lerpHex(this.hills, tgt.hills,   spd);
     this.plants = lerpHex(this.plants, tgt.plants, spd);
+    // Body-Hintergrund mit gleicher Geschwindigkeit mitziehen → bleibt synchron
+    tickBodyBackground(spd);
 
-    const ctx = this.ctx;
+    const ctx  = this.ctx;
     ctx.clearRect(0, 0, W, H);
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, this.sky0);
@@ -814,12 +1066,12 @@ class Background {
       const x = (i * 88 * SCALE_FACTOR + this.time * 28 * SCALE_FACTOR) % W;
       const y = 55 * SCALE_FACTOR + Math.sin(i * 1.4 + this.time * 1.1) * 28 * SCALE_FACTOR;
       ctx.beginPath();
-      ctx.arc(x, y, 2.5 * SCALE_FACTOR, 0, Math.PI*2);
+      ctx.arc(x, y, 2.5 * SCALE_FACTOR, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    this._hill(ctx, 125 * SCALE_FACTOR, 0.65, this.hills, 0.88);
-    this._hill(ctx, 82 * SCALE_FACTOR, 1.15, this.plants, 1.0);
+    this._hill(ctx, 125 * SCALE_FACTOR, 0.65, this.hills,  0.88);
+    this._hill(ctx, 82  * SCALE_FACTOR, 1.15, this.plants, 1.0);
     this.tex.getContext().drawImage(this.off, 0, 0);
     this.tex.refresh();
   }
@@ -831,7 +1083,9 @@ class Background {
     ctx.beginPath();
     ctx.moveTo(0, H);
     for (let x = 0; x <= W; x += 3 * SCALE_FACTOR) {
-      const y = H - h + Math.sin(x * 0.017 / SCALE_FACTOR + this.time * spd) * 13 * SCALE_FACTOR + Math.sin(x * 0.007 / SCALE_FACTOR + this.time * spd * 0.4) * 7 * SCALE_FACTOR;
+      const y = H - h
+        + Math.sin(x * 0.017 / SCALE_FACTOR + this.time * spd) * 13 * SCALE_FACTOR
+        + Math.sin(x * 0.007 / SCALE_FACTOR + this.time * spd * 0.4) * 7 * SCALE_FACTOR;
       ctx.lineTo(x, y);
     }
     ctx.lineTo(W, H);
@@ -857,25 +1111,29 @@ class BallManager {
   }
 
   spawn(x, y, type, scale = 0.6) {
-    const a = ANIMALS[type];
+    const a    = ANIMALS[type];
     const body = this.scene.matter.add.circle(x, y, a.r, {
-      restitution: 0.18, friction: 0.5, frictionStatic: 0.5,
-      density: 0.0012, frictionAir: 0.011 - (a.r / (98 * SCALE_FACTOR)) * 0.004,
-      slop: 0.3 * SCALE_FACTOR,
+      restitution:  0.18,
+      friction:     0.5,
+      frictionStatic: 0.5,
+      density:      0.0012,
+      frictionAir:  0.011 - (a.r / (98 * SCALE_FACTOR)) * 0.004,
+      slop:         0.3 * SCALE_FACTOR,
     });
-    body._type = type;
-    body._merged = false;
+    body._type      = type;
+    body._merged    = false;
     body._spawnTime = Date.now();
 
     const container = this.scene.add.container(x, y).setDepth(1);
-    const circle = this.scene.add.graphics();
+    const circle    = this.scene.add.graphics();
     circle.fillStyle(a.color, 1);
     circle.fillCircle(0, 0, a.r);
     circle.fillStyle(0xffffff, 0.18);
     circle.fillCircle(-a.r * 0.22, -a.r * 0.28, a.r * 0.46);
 
     const label = this.scene.add.text(0, 1, a.emoji, {
-      fontSize: Math.floor(a.r * 1.4) + 'px', fontFamily: 'serif',
+      fontSize:   Math.floor(a.r * 1.4) + 'px',
+      fontFamily: 'serif',
     }).setOrigin(0.5, 0.5);
 
     container.add([circle, label]).setScale(scale);
@@ -893,7 +1151,7 @@ class BallManager {
   }
 
   draw(delta) {
-    const dt = Math.min(delta || 16, 50) / (1000/60);
+    const dt = Math.min(delta || 16, 50) / (1000 / 60);
     for (const b of this.balls) {
       if (!b.body) continue;
       b._scale = Math.min(1, b._scale + 0.05 * dt);
@@ -913,15 +1171,15 @@ class BallManager {
 
   checkGameOver() {
     const now = Date.now();
+    // Nach einem Merge: kurze globale Gnadenfrist für alle Bälle
+    if (this._lastMergeTime && now - this._lastMergeTime < 1200) return false;
     for (const b of this.balls) {
-      if (!b.body || now - b.body._spawnTime < 1500) continue;
+      if (!b.body) continue;
+      if (now - b.body._spawnTime < 2200) continue;
       const ballRadius = ANIMALS[b.body._type].r;
-      const ballCenter = b.body.position.y;
-      const ballTop = ballCenter - ballRadius;
-      const ballHalfway = ballCenter - (ballRadius / 2); // 50% des Balls
-      
-      // Game Over nur wenn der Ball zu 50% über der Linie ist
-      if (ballHalfway < GAME_OVER_LINE && Math.hypot(b.body.velocity.x, b.body.velocity.y) < 0.5) return true;
+      const ballTop    = b.body.position.y - ballRadius;
+      // Vollständig über der Gefahrenlinie und nahezu still
+      if (ballTop < GAME_OVER_LINE && Math.hypot(b.body.velocity.x, b.body.velocity.y) < 0.8) return true;
     }
     return false;
   }
@@ -933,19 +1191,19 @@ class EffectsManager {
   }
 
   spawnMerge(x, y, level) {
-    const a = ANIMALS[Math.min(level, ANIMALS.length-1)];
+    const a = ANIMALS[Math.min(level, ANIMALS.length - 1)];
     const emitter = this.scene.add.particles(x, y, '__DEFAULT', {
-      speed: { min: (70 + level*15) * SCALE_FACTOR, max: (180 + level*25) * SCALE_FACTOR },
-      angle: { min: 0, max: 360 },
-      scale: { start: (0.7 + level*0.07) * SCALE_FACTOR, end: 0 },
-      alpha: { start: 1, end: 0 },
-      lifespan: 380 + level*25,
-      quantity: 14 + level*2,
-      tint: [a.color, 0xffffff, 0xffffcc],
+      speed:    { min: (70 + level * 15) * SCALE_FACTOR, max: (180 + level * 25) * SCALE_FACTOR },
+      angle:    { min: 0, max: 360 },
+      scale:    { start: (0.7 + level * 0.07) * SCALE_FACTOR, end: 0 },
+      alpha:    { start: 1, end: 0 },
+      lifespan: 380 + level * 25,
+      quantity: 14 + level * 2,
+      tint:     [a.color, 0xffffff, 0xffffcc],
       emitting: false,
-      depth: 5,
+      depth:    5,
     });
-    emitter.explode(14 + level*2);
+    emitter.explode(14 + level * 2);
     this.scene.time.delayedCall(700, () => { if (emitter.active) emitter.destroy(); });
 
     const ring = this.scene.add.graphics().setDepth(5);
@@ -953,25 +1211,31 @@ class EffectsManager {
     ring.strokeCircle(0, 0, 12 * SCALE_FACTOR);
     ring.setPosition(x, y);
     this.scene.tweens.add({
-      targets: ring, scaleX: 4.5 + level * 0.55, scaleY: 4.5 + level * 0.55,
-      alpha: 0, duration: 340 + level*18, ease: 'Quad.easeOut',
+      targets:  ring,
+      scaleX:   4.5 + level * 0.55,
+      scaleY:   4.5 + level * 0.55,
+      alpha:    0,
+      duration: 340 + level * 18,
+      ease:     'Quad.easeOut',
       onComplete: () => ring.destroy(),
     });
 
-    this.scene.cameras.main.shake(100 + level*12, 0.004 + level*0.0008);
+    this.scene.cameras.main.shake(100 + level * 12, 0.004 + level * 0.0008);
     playMergeSound(level);
     vibrate(15 + level * 5);
   }
 
   spawnGameOverEffect(cx, cy) {
     const emitter = this.scene.add.particles(cx, cy, '__DEFAULT', {
-      speed: { min: 100 * SCALE_FACTOR, max: 220 * SCALE_FACTOR },
-      angle: { min: 0, max: 360 },
-      scale: { start: 1.2 * SCALE_FACTOR, end: 0 },
-      alpha: { start: 1, end: 0 },
-      lifespan: 900, quantity: 50,
-      tint: [0xff4444, 0xff8800, 0xffff00, 0xffffff],
-      emitting: false, depth: 20,
+      speed:    { min: 100 * SCALE_FACTOR, max: 220 * SCALE_FACTOR },
+      angle:    { min: 0, max: 360 },
+      scale:    { start: 1.2 * SCALE_FACTOR, end: 0 },
+      alpha:    { start: 1, end: 0 },
+      lifespan: 900,
+      quantity: 50,
+      tint:     [0xff4444, 0xff8800, 0xffff00, 0xffffff],
+      emitting: false,
+      depth:    20,
     });
     emitter.explode(50);
     this.scene.time.delayedCall(1100, () => { if (emitter.active) emitter.destroy(); });
@@ -980,13 +1244,15 @@ class EffectsManager {
 
   spawnWinEffect(cx, cy) {
     const confetti = this.scene.add.particles(cx, 0, '__DEFAULT', {
-      speedX: { min: -120 * SCALE_FACTOR, max: 120 * SCALE_FACTOR },
-      speedY: { min: 80 * SCALE_FACTOR, max: 260 * SCALE_FACTOR },
-      scale: { start: 0.9 * SCALE_FACTOR, end: 0.2 * SCALE_FACTOR },
-      alpha: { start: 1, end: 0 },
-      lifespan: 1800, quantity: 4,
-      tint: [0xffd700, 0xff69b4, 0x00cfff, 0x7fff00, 0xff8c00, 0xda70d6],
-      depth: 20, gravityY: 60 * SCALE_FACTOR,
+      speedX:   { min: -120 * SCALE_FACTOR, max: 120 * SCALE_FACTOR },
+      speedY:   { min: 80 * SCALE_FACTOR,   max: 260 * SCALE_FACTOR },
+      scale:    { start: 0.9 * SCALE_FACTOR, end: 0.2 * SCALE_FACTOR },
+      alpha:    { start: 1, end: 0 },
+      lifespan: 1800,
+      quantity: 4,
+      tint:     [0xffd700, 0xff69b4, 0x00cfff, 0x7fff00, 0xff8c00, 0xda70d6],
+      depth:    20,
+      gravityY: 60 * SCALE_FACTOR,
     });
     this.scene.time.delayedCall(2500, () => {
       confetti.stop();
@@ -994,13 +1260,15 @@ class EffectsManager {
     });
 
     const burst = this.scene.add.particles(cx, cy, '__DEFAULT', {
-      speed: { min: 120 * SCALE_FACTOR, max: 300 * SCALE_FACTOR },
-      angle: { min: 0, max: 360 },
-      scale: { start: 1.4 * SCALE_FACTOR, end: 0 },
-      alpha: { start: 1, end: 0 },
-      lifespan: 1000, quantity: 60,
-      tint: [0xffd700, 0xffffff, 0xff69b4, 0x00cfff],
-      emitting: false, depth: 20,
+      speed:    { min: 120 * SCALE_FACTOR, max: 300 * SCALE_FACTOR },
+      angle:    { min: 0, max: 360 },
+      scale:    { start: 1.4 * SCALE_FACTOR, end: 0 },
+      alpha:    { start: 1, end: 0 },
+      lifespan: 1000,
+      quantity: 60,
+      tint:     [0xffd700, 0xffffff, 0xff69b4, 0x00cfff],
+      emitting: false,
+      depth:    20,
     });
     burst.explode(60);
     this.scene.time.delayedCall(1200, () => { if (burst.active) burst.destroy(); });
@@ -1013,6 +1281,7 @@ class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }); }
 
   create() {
+    activeScene = this;
     this._initState();
     this._initPhysics();
     this._initGraphics();
@@ -1023,12 +1292,12 @@ class GameScene extends Phaser.Scene {
   }
 
   _initState() {
-    this.score = 0;
-    this.gameOver = false;
-    this.canDrop = true;
-    this.mouseX = W / 2;
-    this.currentType = randNext();
-    this.nextType = randNext();
+    this.score         = 0;
+    this.gameOver      = false;
+    this.canDrop       = true;
+    this.mouseX        = W / 2;
+    this.currentType   = randNext();
+    this.nextType      = randNext();
     this.gameOverShown = false;
     this.overlayContainer = null;
     drawPreview(this.nextType);
@@ -1038,35 +1307,36 @@ class GameScene extends Phaser.Scene {
   _initPhysics() {
     this.matter.world.setGravity(0, 0.9);
     this.matter.world.setBounds(0, 0, W, H + 100 * SCALE_FACTOR, 32 * SCALE_FACTOR);
-    this.matter.add.rectangle(W/2, H+30*SCALE_FACTOR, W+200*SCALE_FACTOR, 60*SCALE_FACTOR, { 
-      isStatic:true, friction:0.7, restitution:0.1 
+    this.matter.add.rectangle(W / 2, H + 30 * SCALE_FACTOR, W + 200 * SCALE_FACTOR, 60 * SCALE_FACTOR, {
+      isStatic: true, friction: 0.7, restitution: 0.1,
     });
-    this.matter.add.rectangle(-30*SCALE_FACTOR, H/2, 60*SCALE_FACTOR, H*2, { isStatic:true, friction:0.4 });
-    this.matter.add.rectangle(W+30*SCALE_FACTOR, H/2, 60*SCALE_FACTOR, H*2, { isStatic:true, friction:0.4 });
+    this.matter.add.rectangle(-30 * SCALE_FACTOR,      H / 2, 60 * SCALE_FACTOR, H * 2, { isStatic: true, friction: 0.4 });
+    this.matter.add.rectangle(W + 30 * SCALE_FACTOR,   H / 2, 60 * SCALE_FACTOR, H * 2, { isStatic: true, friction: 0.4 });
   }
 
   _initGraphics() {
-    this.bg = new Background(this);
-    this.ballMgr = new BallManager(this);
-    this.effects = new EffectsManager(this);
-    this.guideGfx = this.add.graphics().setDepth(2);
-    this.lineGfx = this.add.graphics().setDepth(2);
-    this.previewGfx = this.add.graphics().setDepth(3);
-    this.previewLabel = this.add.text(W/2, GAME_OVER_LINE, '', {
-      fontFamily: 'serif', fontSize: Math.floor(28 * SCALE_FACTOR) + 'px',
+    this.bg           = new Background(this);
+    this.ballMgr      = new BallManager(this);
+    this.effects      = new EffectsManager(this);
+    this.guideGfx     = this.add.graphics().setDepth(2);
+    this.lineGfx      = this.add.graphics().setDepth(2);
+    this.previewGfx   = this.add.graphics().setDepth(3);
+    this.previewLabel = this.add.text(W / 2, GAME_OVER_LINE, '', {
+      fontFamily: 'serif',
+      fontSize:   Math.floor(28 * SCALE_FACTOR) + 'px',
     }).setOrigin(0.5, 0.5).setDepth(4);
   }
 
   _initInput() {
     const canvas = this.sys.game.canvas;
     let touchActive = false;
-    
+
     canvas.addEventListener('mousemove', e => {
       if (touchActive) return;
       const r = canvas.getBoundingClientRect();
       this.mouseX = Phaser.Math.Clamp((e.clientX - r.left) * (W / r.width), 0, W);
     });
-    
+
     canvas.addEventListener('touchmove', e => {
       e.preventDefault();
       touchActive = true;
@@ -1075,7 +1345,7 @@ class GameScene extends Phaser.Scene {
         this.mouseX = Phaser.Math.Clamp((e.touches[0].clientX - r.left) * (W / r.width), 0, W);
       }
     }, { passive: false });
-    
+
     canvas.addEventListener('touchstart', e => {
       e.preventDefault();
       touchActive = true;
@@ -1084,18 +1354,18 @@ class GameScene extends Phaser.Scene {
         this.mouseX = Phaser.Math.Clamp((e.touches[0].clientX - r.left) * (W / r.width), 0, W);
       }
     }, { passive: false });
-    
+
     canvas.addEventListener('click', () => {
       if (touchActive) return;
       this._handleDrop();
     });
-    
+
     canvas.addEventListener('touchend', e => {
       e.preventDefault();
       this._handleDrop();
       setTimeout(() => touchActive = false, 100);
     }, { passive: false });
-    
+
     document.getElementById('menu-restart').onclick = () => {
       menuOverlay.classList.remove('open');
       this._reset();
@@ -1106,7 +1376,7 @@ class GameScene extends Phaser.Scene {
     if (!this.canDrop || this.gameOver) return;
     this.ballMgr.drop(this.mouseX, this.currentType);
     this.currentType = this.nextType;
-    this.nextType = randNext();
+    this.nextType    = randNext();
     drawPreview(this.nextType);
     this.canDrop = false;
     this.time.delayedCall(380, () => { this.canDrop = true; });
@@ -1127,6 +1397,7 @@ class GameScene extends Phaser.Scene {
         const vy = (bodyA.velocity.y + bodyB.velocity.y) * 0.25;
 
         this.time.delayedCall(16, () => {
+          this._lastMergeTime = Date.now();
           this.effects.spawnMerge(mx, my, nt);
           this.ballMgr.remove(bodyA);
           this.ballMgr.remove(bodyB);
@@ -1147,30 +1418,33 @@ class GameScene extends Phaser.Scene {
     stopBgMusic();
     this.ballMgr.clear();
     if (this.overlayContainer) { this.overlayContainer.destroy(); this.overlayContainer = null; }
-    this.score = 0;
-    this.gameOver = false;
-    this.canDrop = true;
+    this.score         = 0;
+    this.gameOver      = false;
+    this.canDrop       = true;
     this.gameOverShown = false;
-    this.currentType = randNext();
-    this.nextType = randNext();
+    this._lastMergeTime = 0;
+    this.currentType   = randNext();
+    this.nextType      = randNext();
     drawPreview(this.nextType);
     updateScore(0);
     startBgMusic();
   }
 
   _dashedLine(gfx, x1, y1, x2, y2, dash, gap) {
-    const dx = x2-x1, dy = y2-y1, len = Math.hypot(dx,dy);
-    const nx = dx/len, ny = dy/len;
+    const dx  = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    const nx  = dx / len, ny = dy / len;
     let pos = 0, on = true;
     while (pos < len) {
       const seg = Math.min(on ? dash : gap, len - pos);
       if (on) {
         gfx.beginPath();
-        gfx.moveTo(x1 + nx*pos, y1 + ny*pos);
-        gfx.lineTo(x1 + nx*(pos+seg), y1 + ny*(pos+seg));
+        gfx.moveTo(x1 + nx * pos, y1 + ny * pos);
+        gfx.lineTo(x1 + nx * (pos + seg), y1 + ny * (pos + seg));
         gfx.strokePath();
       }
-      pos += seg; on = !on;
+      pos += seg;
+      on = !on;
     }
   }
 
@@ -1178,85 +1452,106 @@ class GameScene extends Phaser.Scene {
     this.guideGfx.clear();
     if (this.gameOver) return;
     const a = ANIMALS[this.currentType];
-    const x = Phaser.Math.Clamp(this.mouseX, a.r+4*SCALE_FACTOR, W-a.r-4*SCALE_FACTOR);
+    const x = Phaser.Math.Clamp(this.mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
     this.guideGfx.lineStyle(1 * SCALE_FACTOR, 0xffffff, 0.2);
-    this._dashedLine(this.guideGfx, x, GAME_OVER_LINE, x, H, 6*SCALE_FACTOR, 5*SCALE_FACTOR);
+    this._dashedLine(this.guideGfx, x, GAME_OVER_LINE, x, H, 6 * SCALE_FACTOR, 5 * SCALE_FACTOR);
   }
 
   _drawDangerLine() {
     this.lineGfx.clear();
     this.lineGfx.lineStyle(2 * SCALE_FACTOR, 0xff4444, 0.7);
-    this._dashedLine(this.lineGfx, 0, GAME_OVER_LINE, W, GAME_OVER_LINE, 10*SCALE_FACTOR, 6*SCALE_FACTOR);
+    this._dashedLine(this.lineGfx, 0, GAME_OVER_LINE, W, GAME_OVER_LINE, 10 * SCALE_FACTOR, 6 * SCALE_FACTOR);
   }
 
   _drawPreviewBall() {
     this.previewGfx.clear();
     if (this.gameOver) { this.previewLabel.setVisible(false); return; }
     const a = ANIMALS[this.currentType];
-    const x = Phaser.Math.Clamp(this.mouseX, a.r+4*SCALE_FACTOR, W-a.r-4*SCALE_FACTOR);
+    const x = Phaser.Math.Clamp(this.mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
     const y = GAME_OVER_LINE - a.r - DROP_Y_OFFSET;
 
     this.previewGfx.fillStyle(0x000000, 0.18);
-    this.previewGfx.fillEllipse(x, y + a.r + 5*SCALE_FACTOR, a.r * 1.7, a.r * 0.38);
+    this.previewGfx.fillEllipse(x, y + a.r + 5 * SCALE_FACTOR, a.r * 1.7, a.r * 0.38);
     this.previewGfx.fillStyle(a.color, 0.9);
     this.previewGfx.fillCircle(x, y, a.r);
     this.previewGfx.fillStyle(0xffffff, 0.2);
-    this.previewGfx.fillCircle(x - a.r*0.22, y - a.r*0.26, a.r * 0.46);
+    this.previewGfx.fillCircle(x - a.r * 0.22, y - a.r * 0.26, a.r * 0.46);
 
-    this.previewLabel.setVisible(true).setPosition(x, y + 2).setText(a.emoji).setFontSize(Math.floor(a.r * 1.4));
+    this.previewLabel.setVisible(true).setPosition(x, y + 2)
+      .setText(a.emoji).setFontSize(Math.floor(a.r * 1.4));
   }
 
   _showWin(ex, ey) {
     if (this.gameOverShown) return;
     this.gameOverShown = true;
-    this.gameOver = true;
-    this.canDrop = false;
+    this.gameOver      = true;
+    this.canDrop       = false;
     stopBgMusic();
     playFanfare();
     this.effects.spawnWinEffect(W / 2, H / 2);
 
     this.time.delayedCall(1200, () => {
-      // Elefanten-Sound abspielen, wenn der Screen erscheint
       playElephantSound();
-      
+
       const overlay = this.add.graphics().setDepth(15);
       overlay.fillStyle(0x000000, 0.5);
       overlay.fillRect(0, 0, W, H);
 
       const panel = this.add.graphics().setDepth(16);
-      const pw = 300 * SCALE_FACTOR, ph = 180 * SCALE_FACTOR;
+      const pw = 300 * SCALE_FACTOR, ph = 230 * SCALE_FACTOR;
       panel.fillStyle(0x1a1200, 0.97);
-      panel.fillRoundedRect(W/2-pw/2, H/2-ph/2, pw, ph, 20*SCALE_FACTOR);
-      panel.lineStyle(3*SCALE_FACTOR, 0xffd700, 0.9);
-      panel.strokeRoundedRect(W/2-pw/2, H/2-ph/2, pw, ph, 20*SCALE_FACTOR);
+      panel.fillRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 20 * SCALE_FACTOR);
+      panel.lineStyle(3 * SCALE_FACTOR, 0xffd700, 0.9);
+      panel.strokeRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 20 * SCALE_FACTOR);
 
-      const elephant = this.add.text(W/2, H/2-52*SCALE_FACTOR, '🐘', {
-        fontSize: Math.floor(52*SCALE_FACTOR) + 'px',
+      const elephant = this.add.text(W / 2, H / 2 - 72 * SCALE_FACTOR, '🐘', {
+        fontSize: Math.floor(52 * SCALE_FACTOR) + 'px',
       }).setOrigin(0.5, 0.5).setDepth(17);
 
-      const title = this.add.text(W/2, H/2+8*SCALE_FACTOR, 'Du hast gewonnen!', {
-        fontSize: Math.floor(26*SCALE_FACTOR) + 'px', 
-        fontFamily: 'system-ui', 
-        color: '#ffd700', 
-        fontStyle: 'bold',
+      const title = this.add.text(W / 2, H / 2 - 10 * SCALE_FACTOR, 'Du hast gewonnen!', {
+        fontSize:   Math.floor(26 * SCALE_FACTOR) + 'px',
+        fontFamily: 'system-ui',
+        color:      '#ffd700',
+        fontStyle:  'bold',
       }).setOrigin(0.5, 0.5).setDepth(17);
 
-      const sc = this.add.text(W/2, H/2+46*SCALE_FACTOR, `Punkte: ${this.score}`, {
-        fontSize: Math.floor(18*SCALE_FACTOR) + 'px', 
-        fontFamily: 'system-ui', 
-        color: '#ffffff',
+      const sc = this.add.text(W / 2, H / 2 + 28 * SCALE_FACTOR, `Punkte: ${this.score}`, {
+        fontSize:   Math.floor(18 * SCALE_FACTOR) + 'px',
+        fontFamily: 'system-ui',
+        color:      '#ffffff',
       }).setOrigin(0.5, 0.5).setDepth(17);
 
-      const container = this.add.container(0, 0, [overlay, panel, elephant, title, sc]).setDepth(15);
+      const btnW = 180 * SCALE_FACTOR, btnH = 44 * SCALE_FACTOR;
+      const btnBg = this.add.graphics().setDepth(17);
+      btnBg.fillStyle(0xffd700, 1);
+      btnBg.fillRoundedRect(W / 2 - btnW / 2, H / 2 + 62 * SCALE_FACTOR - btnH / 2, btnW, btnH, 12 * SCALE_FACTOR);
+
+      const btnText = this.add.text(W / 2, H / 2 + 62 * SCALE_FACTOR, '🔄 Neu starten', {
+        fontSize:   Math.floor(17 * SCALE_FACTOR) + 'px',
+        fontFamily: 'system-ui',
+        color:      '#1a1200',
+        fontStyle:  'bold',
+      }).setOrigin(0.5, 0.5).setDepth(18).setInteractive({ useHandCursor: true });
+
+      btnText.on('pointerup', () => this._reset());
+
+      const container = this.add.container(0, 0, [overlay, panel, elephant, title, sc, btnBg, btnText]).setDepth(15);
       container.setAlpha(0);
       this.tweens.add({
-        targets: container, alpha: 1, duration: 500, ease: 'Quad.easeOut',
+        targets:  container,
+        alpha:    1,
+        duration: 500,
+        ease:     'Quad.easeOut',
         onComplete: () => {
           this.tweens.add({
-            targets: elephant, y: H/2 - 62*SCALE_FACTOR,
-            duration: 350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            targets:  elephant,
+            y:        H / 2 - 82 * SCALE_FACTOR,
+            duration: 350,
+            yoyo:     true,
+            repeat:   -1,
+            ease:     'Sine.easeInOut',
           });
-        }
+        },
       });
       this.overlayContainer = container;
     });
@@ -1265,39 +1560,56 @@ class GameScene extends Phaser.Scene {
   _showGameOver() {
     if (this.gameOverShown) return;
     this.gameOverShown = true;
-    this.effects.spawnGameOverEffect(W/2, H/2);
+    this.effects.spawnGameOverEffect(W / 2, H / 2);
 
     const overlay = this.add.graphics().setDepth(15);
     overlay.fillStyle(0x000000, 0.58);
     overlay.fillRect(0, 0, W, H);
 
     const panel = this.add.graphics().setDepth(16);
-    const pw = 270 * SCALE_FACTOR, ph = 144 * SCALE_FACTOR;
+    const pw = 270 * SCALE_FACTOR, ph = 190 * SCALE_FACTOR;
     panel.fillStyle(0x0d1117, 0.97);
-    panel.fillRoundedRect(W/2-pw/2, H/2-ph/2, pw, ph, 18*SCALE_FACTOR);
-    panel.lineStyle(1*SCALE_FACTOR, 0xffffff, 0.14);
-    panel.strokeRoundedRect(W/2-pw/2, H/2-ph/2, pw, ph, 18*SCALE_FACTOR);
+    panel.fillRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 18 * SCALE_FACTOR);
+    panel.lineStyle(1 * SCALE_FACTOR, 0xffffff, 0.14);
+    panel.strokeRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 18 * SCALE_FACTOR);
 
-    const title = this.add.text(W/2, H/2-28*SCALE_FACTOR, 'Spiel vorbei', {
-      fontSize: Math.floor(30*SCALE_FACTOR) + 'px', 
-      fontFamily: 'system-ui', 
-      color: '#ffffff', 
-      fontStyle: 'bold',
+    const title = this.add.text(W / 2, H / 2 - 44 * SCALE_FACTOR, 'Spiel vorbei', {
+      fontSize:   Math.floor(30 * SCALE_FACTOR) + 'px',
+      fontFamily: 'system-ui',
+      color:      '#ffffff',
+      fontStyle:  'bold',
     }).setOrigin(0.5, 0.5).setDepth(17);
 
-    const sc = this.add.text(W/2, H/2+20*SCALE_FACTOR, `Punkte: ${this.score}`, {
-      fontSize: Math.floor(20*SCALE_FACTOR) + 'px', 
-      fontFamily: 'system-ui', 
-      color: '#ffd700',
+    const sc = this.add.text(W / 2, H / 2 + 0 * SCALE_FACTOR, `Punkte: ${this.score}`, {
+      fontSize:   Math.floor(20 * SCALE_FACTOR) + 'px',
+      fontFamily: 'system-ui',
+      color:      '#ffd700',
     }).setOrigin(0.5, 0.5).setDepth(17);
 
-    this.overlayContainer = this.add.container(0, 0, [overlay, panel, title, sc]).setDepth(15);
+    const btnW = 180 * SCALE_FACTOR, btnH = 44 * SCALE_FACTOR;
+    const btnBg = this.add.graphics().setDepth(17);
+    btnBg.fillStyle(0x27ae60, 1);
+    btnBg.fillRoundedRect(W / 2 - btnW / 2, H / 2 + 50 * SCALE_FACTOR - btnH / 2, btnW, btnH, 12 * SCALE_FACTOR);
+
+    const btnText = this.add.text(W / 2, H / 2 + 50 * SCALE_FACTOR, '🔄 Neu starten', {
+      fontSize:   Math.floor(17 * SCALE_FACTOR) + 'px',
+      fontFamily: 'system-ui',
+      color:      '#ffffff',
+      fontStyle:  'bold',
+    }).setOrigin(0.5, 0.5).setDepth(18).setInteractive({ useHandCursor: true });
+
+    btnText.on('pointerup', () => this._reset());
+
+    this.overlayContainer = this.add.container(0, 0, [overlay, panel, title, sc, btnBg, btnText]).setDepth(15);
     this.overlayContainer.setAlpha(0);
     this.tweens.add({ targets: this.overlayContainer, alpha: 1, duration: 380, ease: 'Quad.easeIn' });
   }
 
   update(time, delta) {
     this.bg.draw(this.score, delta);
+    // Body-Hintergrund synchron zum Canvas-Biome lerpen (jeder Frame)
+    _bgBodyColor = lerpHex(_bgBodyColor, BIOMES[getBiomeIndex(this.score)].bgColor, 0.012);
+    document.body.style.background = _bgBodyColor;
     this._drawGuide();
     this._drawDangerLine();
     this._drawPreviewBall();
@@ -1305,76 +1617,119 @@ class GameScene extends Phaser.Scene {
 
     if (!this.gameOver && this.ballMgr.checkGameOver()) {
       this.gameOver = true;
-      this.canDrop = false;
+      this.canDrop  = false;
       this._showGameOver();
     }
   }
 }
-let gameStarted = false;
 
-// ✅ Start nach Benutzer-Tap (Audio + Spiel)
-async function startGameAfterUserTap() {
+// ========================================
+// KATEGORIE-SYSTEM
+// ========================================
+let gameStarted = false;
+let activeScene = null;
+
+function buildCatGrid(containerId, onSelect) {
+  const grid = document.getElementById(containerId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  Object.entries(EMOJI_CATEGORIES).forEach(([key, cat]) => {
+    const btn       = document.createElement('div');
+    btn.className   = 'cat-btn' + (key === activeCategory ? ' active' : '');
+    btn.dataset.cat = key;
+    btn.innerHTML   = `<span class="cat-icon">${cat.icon}</span><span class="cat-label">${cat.label}</span>`;
+    btn.addEventListener('click', () => { vibrate(8); onSelect(key); });
+    grid.appendChild(btn);
+  });
+}
+
+function refreshCatGrids() {
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === activeCategory);
+  });
+}
+
+function applyCategory(key, scene) {
+  activeCategory = key;
+  ANIMALS.length = 0;
+  getAnimalsForCategory(key).forEach(a => ANIMALS.push(a));
+  refreshCatGrids();
+  if (document.getElementById('merge-bar').children.length > 0) initMergeBar();
+  if (scene) {
+    scene.ballMgr && scene.ballMgr.clear();
+    scene._reset && scene._reset();
+  }
+}
+
+function startGameAfterUserTap() {
   if (gameStarted) return;
   gameStarted = true;
 
-  // ✅ Audio aktivieren
+  // AudioContext entsperren
   try {
-    const ctx = getAudioCtx();
+    const ctx   = getAudioCtx();
     const empty = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = empty;
+    const src   = ctx.createBufferSource();
+    src.buffer  = empty;
     src.connect(ctx.destination);
     src.start(0);
-    console.log("Audio unlocked.");
-  } catch(e){ console.warn(e); }
+  } catch (e) { console.warn(e); }
 
-  // ✅ Hintergrundmusik starten
-  startBgMusic();
-
-  // ✅ Startscreen ausblenden
-  document.getElementById("start-screen").style.display = "none";
-
-  // ✅ Jetzt das Spiel starten
+  document.getElementById('start-screen').style.display = 'none';
   initMergeBar();
+
   new Phaser.Game({
-    type: Phaser.AUTO,
-    width: W,
-    height: H,
-    resolution: window.devicePixelRatio,
-    pixelArt: false,
-    roundPixels: false,
-    backgroundColor: '#0d3a20',
-    parent: 'phaser-container',
+    type:            Phaser.AUTO,
+    width:           W,
+    height:          H,
+    resolution:      window.devicePixelRatio || 1,
+    pixelArt:        false,
+    roundPixels:     false,
+    backgroundColor: '#082b18',
+    parent:          'phaser-container',
     physics: {
-        default: 'matter',
-        matter: {
-          gravity: { y: 0.9 },
-          debug: false,
-          enableSleeping: false,
-          positionIterations: 10,
-          velocityIterations: 10,
-        },
+      default: 'matter',
+      matter: {
+        gravity:            { y: 0.9 },
+        debug:              false,
+        enableSleeping:     false,
+        positionIterations: 10,
+        velocityIterations: 10,
       },
+    },
     scene: [GameScene],
   });
-
 }
 
-// ✅ User‑Interaktion → Spielstart
-window.addEventListener("touchstart", startGameAfterUserTap, { once: true });
-window.addEventListener("mousedown", startGameAfterUserTap, { once: true });
+// ========================================
+// INIT
+// ========================================
+window.addEventListener('DOMContentLoaded', () => {
+  const versionDisplay = document.getElementById('version-display');
+  if (versionDisplay) versionDisplay.textContent = `Version ${VERSION}`;
 
-// Versionsnummer im Startscreen anzeigen
-window.addEventListener("DOMContentLoaded", () => {
-  const versionDisplay = document.getElementById("version-display");
-  if (versionDisplay) {
-    versionDisplay.textContent = `Version ${VERSION}`;
-  }
-  
-  // Initialisiere den dynamischen Hintergrund
   updateDynamicBackground(0);
-});
 
+  buildCatGrid('start-cat-grid', key => {
+    activeCategory = key;
+    ANIMALS.length = 0;
+    getAnimalsForCategory(key).forEach(a => ANIMALS.push(a));
+    refreshCatGrids();
+    const icon = document.querySelector('#start-screen > div:first-child');
+    if (icon) icon.textContent = EMOJI_CATEGORIES[key].emojis[EMOJI_CATEGORIES[key].emojis.length - 1];
+  });
+
+  buildCatGrid('menu-cat-grid', key => {
+    applyCategory(key, activeScene);
+    menuOverlay.classList.remove('open');
+  });
+
+  const startBtn = document.getElementById('start-btn');
+  if (startBtn) {
+    startBtn.addEventListener('click', startGameAfterUserTap);
+    startBtn.addEventListener('touchend', e => { e.preventDefault(); startGameAfterUserTap(); });
+  }
+});
 </script>
 </body>
 </html>
