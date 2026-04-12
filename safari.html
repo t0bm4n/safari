@@ -471,6 +471,23 @@
       <h2>Menü</h2>
       <button class="menu-btn" id="menu-restart">🔄&nbsp; Neu starten</button>
       <button class="menu-btn" id="menu-mute">🔊&nbsp; Sound an</button>
+
+      <div class="cat-section-label">🎵 Musik-Lautstärke</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
+        <span style="font-size:13px;opacity:0.6;min-width:18px;">🔈</span>
+        <input type="range" id="slider-music" min="0" max="100" value="85"
+          style="flex:1;accent-color:#ffd700;height:4px;cursor:pointer;">
+        <span id="label-music" style="font-size:12px;opacity:0.6;min-width:30px;text-align:right;">85%</span>
+      </div>
+
+      <div class="cat-section-label">🔔 Effekte-Lautstärke</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
+        <span style="font-size:13px;opacity:0.6;min-width:18px;">🔈</span>
+        <input type="range" id="slider-sfx" min="0" max="100" value="85"
+          style="flex:1;accent-color:#ffd700;height:4px;cursor:pointer;">
+        <span id="label-sfx" style="font-size:12px;opacity:0.6;min-width:30px;text-align:right;">85%</span>
+      </div>
+
       <div class="cat-section-label">Emoji-Kategorie</div>
       <div id="menu-cat-grid" class="cat-grid"></div>
       <button class="menu-btn" id="menu-close" style="justify-content:center; opacity:0.7;">✕&nbsp; Schließen</button>
@@ -486,7 +503,7 @@
 // ========================================
 // VERSIONSNUMMER
 // ========================================
-const VERSION = "0.0.4";
+const VERSION = "0.1.3";
 
 // ========================================
 // SOUND-KONFIGURATION
@@ -502,12 +519,14 @@ const SOUND_FILES = {
 };
 
 // Auf true setzen, um die eingebauten Synth-Sounds zu nutzen (ohne Dateien)
-const USE_DEFAULT_SOUNDS = false;
+const USE_DEFAULT_SOUNDS = true;
 
 // ========================================
 // NINTENDO SUPER AUDIO ENGINE 🎮
 // ========================================
 let muted = false;
+let musicVolume = 0.65;   // 0..1
+let sfxVolume   = 0.85;   // 0..1
 let audioCtx = null;
 
 // Loop-Playback State
@@ -545,7 +564,7 @@ function _playBuffer(buffer, vol = 0.8) {
     const src  = ctx.createBufferSource();
     const gain = ctx.createGain();
     src.buffer       = buffer;
-    gain.gain.value  = vol;
+    gain.gain.value  = vol * sfxVolume;
     src.connect(gain);
     gain.connect(ctx.destination);
     src.start(0);
@@ -587,6 +606,7 @@ function playTone(freq, type = 'square', duration = 0.2, vol = 0.15, endFreq = n
 
     const gain = ctx.createGain();
     const t    = ctx.currentTime;
+    const effectiveVol = vol * sfxVolume;
 
     // Vibrato (Nintendo-typisch: leichtes Frequenz-Zittern)
     if (vibrato) {
@@ -607,8 +627,8 @@ function playTone(freq, type = 'square', duration = 0.2, vol = 0.15, endFreq = n
 
     // NES-typische Attack/Decay-Hüllkurve
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(vol, t + 0.012);
-    gain.gain.setValueAtTime(vol, t + duration * 0.4);
+    gain.gain.linearRampToValueAtTime(effectiveVol, t + 0.012);
+    gain.gain.setValueAtTime(effectiveVol, t + duration * 0.4);
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
     osc.connect(gain);
@@ -620,132 +640,241 @@ function playTone(freq, type = 'square', duration = 0.2, vol = 0.15, endFreq = n
 
 // ─── Hintergrundmusik: Loop-Datei ODER Synth-Sequencer ──────────────────────
 
-// Sequencer-State
-let _seqRunning    = false;
-let _seqHandle     = null;
-let _seqStep       = 0;
-let _seqBiome      = 0;
+let _seqRunning  = false;
+let _seqHandle   = null;
+let _seqStep     = 0;
+let _seqBiome    = 0;
+let _seqFadingTo = -1;      // Biome-Index während Crossfade
+let _masterGain  = null;    // Master-Gain für Fade
 
-// Biome-Melodien (8-Step-Patterns, null = Pause)
-const BIOME_MELODIES = [
-  // 0: Savanne – entspannt, Dur
-  [262, null, 330, 392, null, 330, 262, null],
-  // 1: Wüste – lebhafter, kleine Terzen
-  [330, 392, 440, null, 392, 330, null, 294],
-  // 2: Ozean – ruhig, schwebend
-  [196, null, 247, null, 294, null, 247, null],
-  // 3: Vulkan – schnell, dramatisch
-  [392, 440, 494, 523, 440, 392, 330, null],
-  // 4: Eis – leise, Moll
-  [220, null, 262, null, 220, null, 196, null],
-  // 5: Blüten – verspielt, Quarten
-  [349, 392, null, 440, null, 392, 349, 330],
-  // 6: Kosmos – langsam, Quinten
-  [196, null, null, 294, null, null, 392, null],
+// ── Tonleitern je Biome ──────────────────────────────────────────────────────
+// C-Dur Pentatonik: C D E G A  (entspannt, hell)
+// C-Moll natürlich: C D Eb F G Ab Bb
+// Dorisch:          C D Eb F G A Bb
+// Phrygisch:        E F G A B C D
+// Lydisch:          C D E F# G A B
+
+const BIOME_TRACKS = [
+  // 0: Savanne – C-Dur Pentatonik, gelassen
+  {
+    tempo: 480,
+    mel:  [262,null,330,null,392,330,null,392, 440,null,392,330,262,null,330,null],
+    mel2: [null,196,null,null,null,247,null,null,null,196,null,null,null,196,null,null],
+    bass: [98, null,null,null,131,null,null,null, 98,null,null,null,110,null,null,null],
+    drums:[1,0,0,0, 2,0,0,0, 1,0,1,0, 2,0,0,0],
+  },
+  // 1: Wüste – Phrygisch, hypnotisch-treibend
+  {
+    tempo: 340,
+    mel:  [330,311,330,null,370,330,311,null, 330,null,370,392,370,330,null,311],
+    mel2: [null,null,220,null,null,null,208,null,null,null,220,null,null,null,208,null],
+    bass: [110,null,null,110,null,null,110,null, 104,null,null,104,null,null,104,null],
+    drums:[1,0,1,0, 2,0,1,0, 1,0,1,0, 2,1,0,0],
+  },
+  // 2: Ozean – Lydisch, schwebend-weiträumig
+  {
+    tempo: 600,
+    mel:  [262,null,null,330,null,null,370,null, 392,null,null,370,null,null,330,null],
+    mel2: [null,null,196,null,null,196,null,null,null,null,247,null,null,247,null,null],
+    bass: [131,null,null,null,null,null,null,null, 123,null,null,null,null,null,null,null],
+    drums:[1,0,0,0, 0,0,2,0, 0,0,0,0, 0,0,2,0],
+  },
+  // 3: Vulkan – Phrygisch schnell, dramatisch
+  {
+    tempo: 260,
+    mel:  [392,415,392,370, 392,null,370,349, 370,392,415,392, 370,null,349,null],
+    mel2: [null,null,247,null,null,null,233,null,null,null,247,null,null,null,220,null],
+    bass: [130,null,130,null,138,null,130,null,130,null,116,null,116,null,130,null],
+    drums:[1,0,1,2, 1,1,0,2, 1,0,1,0, 2,1,1,0],
+  },
+  // 4: Eis – Moll, langsam, klar
+  {
+    tempo: 680,
+    mel:  [220,null,null,262,null,null,196,null, 220,null,262,null,233,null,null,196],
+    mel2: [null,null,165,null,null,165,null,null,null,null,175,null,null,null,175,null],
+    bass: [110,null,null,null,98, null,null,null, 110,null,null,null,104,null,null,null],
+    drums:[1,0,0,0, 2,0,0,0, 0,0,0,0, 2,0,0,0],
+  },
+  // 5: Kirschblüte – Dorisch, verspielt-romantisch
+  {
+    tempo: 400,
+    mel:  [349,null,392,null,440,392,349,null, 370,null,415,440,415,370,null,349],
+    mel2: [null,262,null,262,null,null,262,null,null,247,null,null,null,247,null,null],
+    bass: [117,null,null,null,131,null,null,null,117,null,null,null,110,null,null,null],
+    drums:[1,0,0,2, 0,0,1,0, 1,0,0,2, 0,1,0,0],
+  },
+  // 6: Kosmos – Quinten, sehr langsam, meditativ
+  {
+    tempo: 820,
+    mel:  [196,null,null,null,294,null,null,null, 220,null,null,null,330,null,null,null],
+    mel2: [null,null,null,147,null,null,null,220,null,null,null,165,null,null,null,247],
+    bass: [65, null,null,null,null,null,null,null, 73,null,null,null,null,null,null,null],
+    drums:[1,0,0,0, 0,0,0,0, 0,0,2,0, 0,0,0,0],
+  },
 ];
 
-// Bass-Patterns (ein Ton pro 4 Steps)
-const BIOME_BASS = [
-  [98,  null, null, null, 98,  null, null, null],
-  [110, null, null, null, 130, null, null, null],
-  [82,  null, null, null, 82,  null, null, null],
-  [130, null, null, null, 110, null, null, null],
-  [82,  null, null, null, 73,  null, null, null],
-  [117, null, null, null, 117, null, null, null],
-  [65,  null, null, null, null,null, null, null],
-];
+// Separater Crossfade-Gain (nur für Biome-Übergang, NICHT für Lautstärke)
+let _crossfadeGain = null;
+function _getCrossfadeGain() {
+  if (_crossfadeGain) return _crossfadeGain;
+  const ctx = getAudioCtx();
+  _crossfadeGain = ctx.createGain();
+  _crossfadeGain.gain.value = 1;
+  _crossfadeGain.connect(ctx.destination);
+  return _crossfadeGain;
+}
 
-// Kick/Snare Pattern (1 = kick, 2 = snare)
-const DRUM_PATTERN = [1, 0, 0, 2, 1, 0, 1, 2];
+// Master-Gain NUR für Lautstärke-Regler – wird nie für Biome-Fade genutzt
+function _getMasterGain() {
+  if (_masterGain) return _masterGain;
+  const ctx = getAudioCtx();
+  _masterGain = ctx.createGain();
+  _masterGain.gain.value = musicVolume;
+  _masterGain.connect(_getCrossfadeGain());
+  return _masterGain;
+}
 
-const BIOME_TEMPOS = [420, 320, 550, 240, 650, 380, 750]; // ms pro Step
+// Sanfter Crossfade beim Biomewechsel – nur _crossfadeGain berühren
+function updateMusicBiome(biomeIdx) {
+  if (_seqBiome === biomeIdx || _seqFadingTo === biomeIdx) return;
+  _seqFadingTo = biomeIdx;
+  const cfg = _getCrossfadeGain();
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  cfg.gain.cancelScheduledValues(now);
+  cfg.gain.setValueAtTime(cfg.gain.value, now);
+  cfg.gain.linearRampToValueAtTime(0.0, now + 1.0);
+  setTimeout(() => {
+    _seqBiome    = biomeIdx;
+    _seqFadingTo = -1;
+    _seqStep     = 0;
+    _hihat._buf  = null;
+    if (!muted && _seqRunning) {
+      const cfg2 = _getCrossfadeGain();
+      const ctx2 = getAudioCtx();
+      cfg2.gain.cancelScheduledValues(ctx2.currentTime);
+      cfg2.gain.setValueAtTime(0, ctx2.currentTime);
+      cfg2.gain.linearRampToValueAtTime(1.0, ctx2.currentTime + 0.8);
+    }
+  }, 1050);
+}
+
+function updateMusicTempo(balls) {
+  if (!balls || balls.length === 0) { _currentStackRatio = 0; return; }
+  const now = Date.now();
+  // Nur ruhende Bälle zählen: mindestens 1s alt und nahezu still
+  let highestY = H;
+  for (const b of balls) {
+    if (!b.body) continue;
+    if (now - b.body._spawnTime < 1000) continue; // frisch gefallen → ignorieren
+    const vel = Math.hypot(b.body.velocity.x, b.body.velocity.y);
+    if (vel > 1.5) continue; // noch in Bewegung → ignorieren
+    const top = b.body.position.y - ANIMALS[b.body._type].r;
+    if (top < highestY) highestY = top;
+  }
+  // Ratio: 0 = kein ruhender Ball / alles unten, 1 = ruhender Ball an der Gefahrenlinie
+  const playableH = H - GAME_OVER_LINE;
+  const newRatio = Math.max(0, Math.min(1, (H - highestY) / playableH));
+  // Sanft lerpen damit kein abrupter Tempo-Sprung passiert
+  _currentStackRatio += (newRatio - _currentStackRatio) * 0.08;
+}
+
+function _getTempoMs(baseTempo) {
+  // Exponentieller Anstieg: schon bei 40% Stack klar hörbar schneller
+  // ratio=0 → 1x, ratio=0.4 → ~2x, ratio=1.0 → 4x schneller
+  const speedFactor = Math.pow(4, _currentStackRatio);
+  return Math.max(55, Math.floor(baseTempo / speedFactor));
+}
 
 function _seqTick() {
   if (!_seqRunning || muted) return;
   const ctx   = getAudioCtx();
   const now   = ctx.currentTime;
-  const step  = _seqStep % 8;
-  const mel   = BIOME_MELODIES[_seqBiome];
-  const bass  = BIOME_BASS[_seqBiome];
-  const tempo = BIOME_TEMPOS[_seqBiome];
+  const track = BIOME_TRACKS[_seqBiome];
+  const step  = _seqStep % 16;
+  const t     = _getTempoMs(track.tempo);
+  const out   = _getMasterGain();
 
-  // Melodie-Stimme (Pulswelle 25%)
-  if (mel[step]) {
-    const f = mel[step];
-    _schedNote(ctx, now, f, 'pulse25', tempo * 0.0007, 0.13, false);
-    // Zweite Stimme eine Terz tiefer, sehr leise
-    if (step % 4 === 0) _schedNote(ctx, now, f * 0.75, 'triangle', tempo * 0.001, 0.05, false);
+  // Melodie – Hauptstimme: weiche Sinuswelle statt harter Pulswelle für Hintergrund
+  if (track.mel[step]) {
+    _note(ctx, now, track.mel[step], 'sine',     t * 0.00085, 0.14, out);
   }
-
-  // Bass (Dreick-Welle, eine Oktave tiefer)
-  if (bass[step]) {
-    _schedNote(ctx, now, bass[step], 'triangle', tempo * 0.0014, 0.18, false);
+  // Melodie – Gegenstimme: triangle, noch weicher
+  if (track.mel2[step]) {
+    _note(ctx, now, track.mel2[step], 'triangle', t * 0.0012,  0.07, out);
   }
-
+  // Bass
+  if (track.bass[step]) {
+    _note(ctx, now, track.bass[step], 'sine',     t * 0.0018,  0.16, out);
+  }
   // Drums
-  const drum = DRUM_PATTERN[step];
-  if (drum === 1) _kick(ctx, now);
-  if (drum === 2) _snare(ctx, now);
+  if (track.drums[step] === 1) _kick(ctx, now, out);
+  if (track.drums[step] === 2) _hihat(ctx, now, out);   // weicher Hihat statt Snare
 
   _seqStep++;
-  _seqHandle = setTimeout(_seqTick, tempo);
+  _seqHandle = setTimeout(_seqTick, t);
 }
 
-function _schedNote(ctx, time, freq, type, dur, vol, vib) {
+// Weichere Note mit langsamem Attack und sanftem Release
+function _note(ctx, time, freq, type, dur, vol, output) {
   if (muted) return;
-  try {
-    let osc;
-    if (type === 'pulse25') osc = _createPulseOsc(ctx, freq, 0.25);
-    else if (type === 'pulse50') osc = _createPulseOsc(ctx, freq, 0.5);
-    else { osc = ctx.createOscillator(); osc.type = type; osc.frequency.value = freq; }
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(vol, time + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(time); osc.stop(time + dur + 0.02);
-  } catch(_) {}
-}
-
-function _kick(ctx, time) {
   try {
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.frequency.setValueAtTime(120, time);
-    osc.frequency.exponentialRampToValueAtTime(45, time + 0.12);
-    gain.gain.setValueAtTime(0.28, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(time); osc.stop(time + 0.2);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, time);
+    // Leichtes Vibrato für mehr Wärme
+    const lfo = ctx.createOscillator();
+    const lfoG = ctx.createGain();
+    lfo.frequency.value = 4.5;
+    lfoG.gain.value = freq * 0.006;
+    lfo.connect(lfoG); lfoG.connect(osc.frequency);
+    // Sanfte ADSR: langsamer Attack, weicher Release
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + Math.min(dur * 0.18, 0.06));
+    gain.gain.setValueAtTime(vol * 0.82, time + dur * 0.5);
+    gain.gain.linearRampToValueAtTime(0, time + dur);
+    osc.connect(gain); gain.connect(output);
+    lfo.start(time); lfo.stop(time + dur + 0.05);
+    osc.start(time); osc.stop(time + dur + 0.05);
   } catch(_) {}
 }
 
-function _snare(ctx, time) {
+function _kick(ctx, time, output) {
   try {
-    // Weißes Rauschen – kleiner Buffer, einmalig erstellt und wiederverwendet
-    if (!_snare._buf) {
-      const buf  = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.06), ctx.sampleRate);
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.setValueAtTime(90, time);
+    osc.frequency.exponentialRampToValueAtTime(38, time + 0.14);
+    gain.gain.setValueAtTime(0.22, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.20);
+    osc.connect(gain); gain.connect(output);
+    osc.start(time); osc.stop(time + 0.22);
+  } catch(_) {}
+}
+
+// Sanfter Hihat statt Snare – viel weniger aggressiv
+function _hihat(ctx, time, output) {
+  try {
+    if (!_hihat._buf || _hihat._ctx !== ctx) {
+      const buf  = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
       const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      _snare._buf = buf;
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.4;
+      _hihat._buf = buf; _hihat._ctx = ctx;
     }
     const src  = ctx.createBufferSource();
-    src.buffer = _snare._buf;
+    src.buffer = _hihat._buf;
+    // Hochpassfilter: nur hohe Frequenzen → klingt wie echter Hihat, nicht Rauschen
+    const hp   = ctx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 6000;
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.18, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-    src.connect(gain); gain.connect(ctx.destination);
-    src.start(time); src.stop(time + 0.12);
+    gain.gain.setValueAtTime(0.10, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+    src.connect(hp); hp.connect(gain); gain.connect(output);
+    src.start(time); src.stop(time + 0.07);
   } catch(_) {}
 }
 
-// Wird von updateScore() aufgerufen – wechselt Tempo & Melodie je nach Biome
-function updateMusicBiome(biomeIdx) {
-  if (_seqBiome === biomeIdx) return;
-  _seqBiome = biomeIdx;
-  // Snare-Buffer zurücksetzen (neuer AudioContext-Rate könnte abweichen)
-  _snare._buf = null;
-}
 
 async function startBgMusic() {
   if (muted) return;
@@ -769,15 +898,31 @@ function _startLoopSource() {
   try {
     const ctx  = getAudioCtx();
     const src  = ctx.createBufferSource();
-    const gain = ctx.createGain();
     src.buffer = _bgLoopBuffer;
     src.loop   = true;
-    gain.gain.value = 0.55;
-    src.connect(gain);
-    gain.connect(ctx.destination);
+    src.connect(_getMasterGain());
     src.start(0);
     _bgLoopSource = src;
   } catch (_) {}
+}
+
+function resetBgMusicBiome() {
+  // Biome sofort auf 0 zuruecksetzen (kein Crossfade beim Neustart)
+  _seqBiome    = 0;
+  _seqFadingTo = -1;
+  _seqStep     = 0;
+  _hihat._buf  = null;
+  _bgTargetBiomeIdx = 0;
+  _bgBodyColor = BGBODY_KEYS[0].c;
+  _currentStackRatio = 0;
+  // Crossfade-Gain sofort auf 1 zurueck
+  if (_crossfadeGain) {
+    try {
+      const ctx = getAudioCtx();
+      _crossfadeGain.gain.cancelScheduledValues(ctx.currentTime);
+      _crossfadeGain.gain.setValueAtTime(1, ctx.currentTime);
+    } catch(_) {}
+  }
 }
 
 function stopBgMusic() {
@@ -789,83 +934,120 @@ function stopBgMusic() {
   _seqRunning = false;
 }
 
-// ─── Drop-Sound: Nintendo-Style Pitchfall ────────────────────────────────────
+// ─── Drop-Sound: sofort, weich ───────────────────────────────────────────────
 function playDropSound() {
-  if (USE_DEFAULT_SOUNDS) {
-    // Kurzer NES-Pitchfall (square → triangle)
-    playTone(320, 'pulse50', 0.09, 0.18, 120);
-    return;
-  }
-  _loadAudioBuffer('drop', SOUND_FILES.drop).then(buf => {
-    if (buf) _playBuffer(buf, 0.5);
-    else     playTone(320, 'pulse50', 0.09, 0.18, 120);
-  });
+  if (muted) return;
+  try {
+    const ctx  = getAudioCtx();
+    const t    = ctx.currentTime;
+    const out  = _getMasterGain();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(280, t);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.10);
+    gain.gain.setValueAtTime(0.16 * sfxVolume, t);
+    gain.gain.linearRampToValueAtTime(0, t + 0.12);
+    osc.connect(gain); gain.connect(out);
+    osc.start(t); osc.stop(t + 0.14);
+  } catch(_) {}
 }
 
-// ─── Merge-Sound: Arpeggio-Akkord (wie Super Mario Münze) ────────────────────
+// ─── Merge-Sound: warm, smooth, organisch ────────────────────────────────────
 function playMergeSound(level) {
-  if (USE_DEFAULT_SOUNDS) {
-    _niMerge(level);
-    return;
-  }
-  _loadAudioBuffer('merge', SOUND_FILES.merge).then(buf => {
-    if (buf) _playBuffer(buf, 0.7);
-    else     _niMerge(level);
+  if (muted) return;
+  _playMergeNow(level);
+}
+
+function _playMergeNow(level) {
+  const ctx  = getAudioCtx();
+  const t    = ctx.currentTime;
+  const out  = _getMasterGain();
+
+  // Grundton steigt sanft mit dem Level (Pentatonik-Töne)
+  const roots = [262, 294, 330, 370, 392, 440, 494, 523, 587, 659];
+  const root  = roots[Math.min(level, roots.length - 1)];
+
+  // Chorus-Effekt: zwei leicht verstimmte Sinus-Wellen → warm, nicht metallisch
+  [[root, 0], [root * 1.003, 0.01]].forEach(([freq, offset]) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t + offset);
+    gain.gain.setValueAtTime(0, t + offset);
+    gain.gain.linearRampToValueAtTime(0.18 * sfxVolume, t + offset + 0.04);
+    gain.gain.setValueAtTime(0.16 * sfxVolume, t + offset + 0.12);
+    gain.gain.linearRampToValueAtTime(0, t + offset + 0.55);
+    osc.connect(gain); gain.connect(out);
+    osc.start(t + offset); osc.stop(t + 0.62);
   });
-}
 
-function _niMerge(level) {
-  // Klassischer Sweep (wie vorher, aber mit Pulswelle statt Sinus)
-  playTone(280 + level * 90, 'pulse50', 0.28, 0.20, 500 + level * 80);
-  // Zweite Stimme: leichter Dreiklang
-  setTimeout(() => { if (!muted) playTone(400 + level * 60, 'triangle', 0.18, 0.12); }, 40);
-  // Glöckchen für höhere Level
-  if (level >= 3) {
-    setTimeout(() => { if (!muted) playTone((600 + level * 80) * 2, 'triangle', 0.22, 0.07); }, 90);
+  // Oktave drüber: triangle, sehr leise → Oberton-Wärme
+  const osc2  = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'triangle';
+  osc2.frequency.value = root * 2;
+  gain2.gain.setValueAtTime(0, t);
+  gain2.gain.linearRampToValueAtTime(0.07 * sfxVolume, t + 0.05);
+  gain2.gain.linearRampToValueAtTime(0, t + 0.40);
+  osc2.connect(gain2); gain2.connect(out);
+  osc2.start(t); osc2.stop(t + 0.42);
+
+  // Für höhere Level: kleiner aufsteigender Akkord-Sweep (Quinte)
+  if (level >= 4) {
+    const osc3  = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(root * 1.5, t + 0.08);
+    gain3.gain.setValueAtTime(0, t + 0.08);
+    gain3.gain.linearRampToValueAtTime(0.09, t + 0.14);
+    gain3.gain.linearRampToValueAtTime(0, t + 0.50);
+    osc3.connect(gain3); gain3.connect(out);
+    osc3.start(t + 0.08); osc3.stop(t + 0.52);
   }
 }
 
-// ─── Fanfare: NES-Victory-Jingle ──────────────────────────────────────────────
+// Wrapper damit SFX-Funktionen den AudioContext immer bereit haben
+function _playSFX(fn) {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') { ctx.resume().then(() => fn(ctx)); return; }
+    fn(ctx);
+  } catch(_) {}
+}
+
+// ─── Fanfare: NES-Victory-Jingle, vollständig intern scheduliert ─────────────
 function playFanfare() {
   if (muted) return;
   try {
     const ctx = getAudioCtx();
-    // Melody (Super Mario-Style Aufwärtsläufe)
+    const t0  = ctx.currentTime + 0.02;
     const melody = [
-      { f: 523,  t: 0.00 }, { f: 659,  t: 0.10 }, { f: 784,  t: 0.20 },
-      { f: 1047, t: 0.30 }, { f: 1319, t: 0.45 }, { f: 1568, t: 0.60 },
-      // Akkord am Ende
-      { f: 523,  t: 0.88 }, { f: 659,  t: 0.88 }, { f: 784,  t: 0.88 }, { f: 1047, t: 0.88 },
+      { f: 523,  dt: 0.00 }, { f: 659,  dt: 0.10 }, { f: 784,  dt: 0.20 },
+      { f: 1047, dt: 0.30 }, { f: 1319, dt: 0.45 }, { f: 1568, dt: 0.60 },
+      { f: 523,  dt: 0.88 }, { f: 659,  dt: 0.88 }, { f: 784,  dt: 0.88 }, { f: 1047, dt: 0.88 },
     ];
-    melody.forEach(({ f, t }) => {
-      setTimeout(() => {
-        if (!muted) playTone(f, 'pulse25', 0.35, 0.2);
-      }, t * 1000);
+    melody.forEach(({ f, dt }) => {
+      const osc  = _createPulseOsc(ctx, f, 0.25);
+      const gain = ctx.createGain();
+      const st   = t0 + dt;
+      gain.gain.setValueAtTime(0.18 * sfxVolume, st);
+      gain.gain.exponentialRampToValueAtTime(0.001, st + 0.38);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(st); osc.stop(st + 0.4);
     });
-    // Bass-Drum-Ersatz mit weißem Rauschen
-    [0, 0.10, 0.20, 0.30].forEach(t => {
-      setTimeout(() => {
-        if (muted) return;
-        try {
-          const bufSize = Math.floor(ctx.sampleRate * 0.05);
-          const nb   = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-          const data = nb.getChannelData(0);
-          for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.25;
-          const nsrc = ctx.createBufferSource();
-          nsrc.buffer = nb;
-          const ng = ctx.createGain();
-          ng.gain.setValueAtTime(0.3, ctx.currentTime);
-          ng.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-          nsrc.connect(ng);
-          ng.connect(ctx.destination);
-          nsrc.start();
-        } catch (_) {}
-      }, t * 1000);
-    });
-    // Sawtooth-Tröte am Ende
-    setTimeout(() => {
-      if (!muted) playTone(300, 'sawtooth', 0.8, 0.22, 900);
-    }, 900);
+    // Kick-Hits intern
+    [0, 0.10, 0.20, 0.30].forEach(dt => _kick(ctx, t0 + dt));
+    // Sawtooth-Tröte
+    const toot  = ctx.createOscillator();
+    const tgain = ctx.createGain();
+    toot.type = 'sawtooth';
+    toot.frequency.setValueAtTime(300, t0 + 0.9);
+    toot.frequency.exponentialRampToValueAtTime(900, t0 + 1.4);
+    tgain.gain.setValueAtTime(0.22 * sfxVolume, t0 + 0.9);
+    tgain.gain.exponentialRampToValueAtTime(0.001, t0 + 1.8);
+    toot.connect(tgain); tgain.connect(ctx.destination);
+    toot.start(t0 + 0.9); toot.stop(t0 + 1.9);
   } catch (_) {}
 }
 
@@ -874,14 +1056,21 @@ function playElephantSound() {
   if (muted) return;
   try {
     const ctx = getAudioCtx();
+    const t0  = ctx.currentTime + 0.01;
     [
-      { f: 180, t: 0.0,  dur: 0.3  },
-      { f: 220, t: 0.3,  dur: 0.25 },
-      { f: 380, t: 0.55, dur: 0.4  },
-    ].forEach(({ f, t, dur }) => {
-      setTimeout(() => {
-        if (!muted) playTone(f, 'sawtooth', dur, 0.25, f * 1.5);
-      }, t * 1000);
+      { f: 180, dt: 0.0,  dur: 0.3  },
+      { f: 220, dt: 0.3,  dur: 0.25 },
+      { f: 380, dt: 0.55, dur: 0.4  },
+    ].forEach(({ f, dt, dur }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f, t0 + dt);
+      osc.frequency.exponentialRampToValueAtTime(f * 1.5, t0 + dt + dur);
+      gain.gain.setValueAtTime(0.25 * sfxVolume, t0 + dt);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + dt + dur);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0 + dt); osc.stop(t0 + dt + dur + 0.02);
     });
   } catch (_) {}
 }
@@ -889,7 +1078,7 @@ function playElephantSound() {
 // ========================================
 // TIER-DROP-LIMIT
 // ========================================
-const MAX_DROP_ANIMAL_INDEX = 2;
+const MAX_DROP_ANIMAL_INDEX = 3;
 
 // ========================================
 // SPIEL-KONFIGURATION
@@ -914,56 +1103,109 @@ const EMOJI_CATEGORIES = {
     label:  'Zoo-Tiere',
     icon:   '🐘',
     emojis: ['🐭','🐰','🦊','🐵','🐶','🐱','🐻','🐯','🦁','🐘'],
-    colors: [0xe8e8e8, 0xffaadd, 0xffbb77, 0xffdd88, 0xaaffaa, 0x88eeff, 0xaaccdd, 0xffddaa, 0xddddf8, 0xcc99ff],
+    colors: [0xf0e6ff, 0xffd6ee, 0xffddb8, 0xfff0b8, 0xd4f5d4, 0xc8f0ff, 0xd8ecf5, 0xffebd4, 0xe8e8ff, 0xe8d4ff],
   },
   ocean: {
     label:  'Meerestiere',
     icon:   '🐳',
     emojis: ['🦐','🐚','🦀','🐡','🐠','🐟','🦑','🐙','🦈','🐳'],
-    colors: [0xffccaa, 0xffe0c8, 0xff8866, 0xffdd44, 0xff8822, 0x44aaff, 0xcc88ff, 0xff6699, 0x6688cc, 0x4488ff],
+    colors: [0xffe8d4, 0xfff0e0, 0xffd4c8, 0xfff5b8, 0xffddb0, 0xc8e8ff, 0xebd4ff, 0xffd4e8, 0xd4dff5, 0xc8d8ff],
   },
   farm: {
     label:  'Bauernhof',
     icon:   '🐄',
     emojis: ['🐣','🐤','🐇','🐑','🐐','🐖','🦆','🐄','🐴','🐎'],
-    colors: [0xffee88, 0xffdd44, 0xffffff, 0xeeddcc, 0xbbddaa, 0xffbbaa, 0x88ccff, 0xccaa66, 0xddbb88, 0xcc9944],
+    colors: [0xfff5c0, 0xffeea0, 0xf5f5f5, 0xf5e8d8, 0xdff0cc, 0xffddd4, 0xd4ecff, 0xf0ddb0, 0xeeddbb, 0xf0d8a8],
   },
   bugs: {
     label:  'Insekten',
     icon:   '🦋',
     emojis: ['🐛','🐌','🐜','🐝','🦟','🦗','🪲','🦎','🐸','🦋'],
-    colors: [0x88cc44, 0xbbaa66, 0x554422, 0xffcc00, 0x88aacc, 0x556644, 0x884422, 0x66aa44, 0x44cc66, 0xff88cc],
+    colors: [0xd8f0b0, 0xeeddbb, 0xe8ddd4, 0xfff0a0, 0xd4e4f5, 0xd4e8d8, 0xeeddcc, 0xd4f0d4, 0xc8f5d8, 0xffd8f0],
   },
   space: {
     label:  'Weltraum',
     icon:   '🚀',
     emojis: ['⭐','🌙','💫','☄️','🪐','🌍','🌟','🛸','🚀','🌌'],
-    colors: [0xffdd44, 0xccaaff, 0xffffaa, 0xff8844, 0xddaaff, 0x44aaff, 0xffff66, 0x88ffdd, 0xff6644, 0x8844ff],
+    colors: [0xfff5b8, 0xe8d8ff, 0xfffff0, 0xffddb8, 0xeed8ff, 0xc8e8ff, 0xffff99, 0xc8ffee, 0xffd4c8, 0xd4c8ff],
   },
   food: {
     label:  'Essen',
     icon:   '🍕',
     emojis: ['🍇','🍓','🍔','🍩','🌮','🍕','🍜','🍣','🎂','🍦'],
-    // Pastell-Töne: erkennbar aber nicht zu kräftig
-    colors: [0xddaaee, 0xffaaaa, 0xddaa88, 0xffddaa, 0xffeebb, 0xffbbaa, 0xffeecc, 0xffcccc, 0xffccdd, 0xffffff],
+    colors: [0xeed8ff, 0xffd8d8, 0xffe8cc, 0xfff0d4, 0xfff5dd, 0xffddd4, 0xfff5e4, 0xffe8e8, 0xffe0ee, 0xfff8f8],
   },
   sports: {
     label:  'Sport',
     icon:   '⚽',
     emojis: ['🏓','🎾','⚽','🏀','🎱','🏈','🥊','🏆','🎯','👑'],
-    // Aufgehellt, dunkle Farben (0x111111) vermieden
-    colors: [0xf0f0f0, 0xffee88, 0xeeeeee, 0xffcc99, 0xcccccc, 0xddbb88, 0xffaaaa, 0xffdd88, 0xffaaaa, 0xffee88],
+    colors: [0xf0f0f8, 0xfff8cc, 0xf0f0f0, 0xffe8cc, 0xe8e8e8, 0xf5e4cc, 0xffd8d8, 0xfff0cc, 0xffd8d8, 0xfff8cc],
   },
   fantasy: {
     label:  'Fantasy',
     icon:   '🐉',
     emojis: ['🍄','🔮','🧿','⚡','🌈','🦄','🧨','🐉','👁️','💎'],
-    // Pastellisiert, war zu kräftig
-    colors: [0xffaaaa, 0xccaaff, 0xaabbff, 0xffeeaa, 0xffccdd, 0xffccff, 0xffaaaa, 0xaaeedd, 0xccddff, 0xaaffff],
+    colors: [0xffd8d8, 0xe8d8ff, 0xd8e0ff, 0xfff8d8, 0xffe8f0, 0xffe8ff, 0xffd8d8, 0xd4f5ee, 0xddeeff, 0xd8ffff],
   },
 };
 
 let activeCategory = 'zoo';
+
+// Konvertiert einen hex-Farbwert in eine dunklere, gesaettigtere Randfarbe
+// Nutzt HSL um echten Kontrast zu garantieren egal wie hell die Ballfarbe ist
+function _borderColorFor(hexColor) {
+  const r = ((hexColor >> 16) & 0xff) / 255;
+  const g = ((hexColor >> 8)  & 0xff) / 255;
+  const b =  (hexColor        & 0xff) / 255;
+
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  // Dunkel (L: 25-35%) und staerker gesaettigt fuer klaren Rand
+  const newL = 0.28;
+  const newS = Math.min(1, s + 0.3);
+
+  function hsl2rgb(h, s, l) {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const f = t => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    return [Math.round(f(h+1/3)*255), Math.round(f(h)*255), Math.round(f(h-1/3)*255)];
+  }
+
+  const [nr, ng, nb] = hsl2rgb(h, newS, newL);
+  return (nr << 16) | (ng << 8) | nb;
+}
+
+// Stellt sicher dass Farben nicht zu hell (fast weiß) werden
+// Hellt zu dunkle Farben auf, verdunkelt zu helle leicht
+function _sanitizeColor(hex) {
+  const r = (hex >> 16) & 0xff;
+  const g = (hex >> 8)  & 0xff;
+  const b =  hex        & 0xff;
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  if (brightness > 235) {
+    // Zu hell → leicht abdunkeln und einfärben damit kein Weiß-Kreis
+    const f = 0.82;
+    return (Math.round(r * f) << 16) | (Math.round(g * f) << 8) | Math.round(b * f);
+  }
+  return hex;
+}
 
 function getAnimalsForCategory(catKey) {
   const cat    = EMOJI_CATEGORIES[catKey];
@@ -971,29 +1213,110 @@ function getAnimalsForCategory(catKey) {
   return cat.emojis.map((emoji, i) => ({
     emoji,
     r:     Math.floor(radii[i] * SCALE_FACTOR),
-    color: cat.colors[i],
+    color: _sanitizeColor(cat.colors[i]),
   }));
 }
 
 let ANIMALS = getAnimalsForCategory('zoo');
 
-const BIOMES = [
-  { from: 0,   sky: ['#4db87a','#0a3d22'], hills: '#0d5c2e', plants: '#1e8c4a', bgColor: '#082b18' },
-  { from: 50,  sky: ['#f5c842','#c47a1e'], hills: '#a85c10', plants: '#d4843a', bgColor: '#6b3a08' },
-  { from: 110, sky: ['#3ab8d4','#084870'], hills: '#0a5e8a', plants: '#1590b8', bgColor: '#052d48' },
-  { from: 190, sky: ['#e85c20','#5a1408'], hills: '#7a1c10', plants: '#c43a18', bgColor: '#350a06' },
-  { from: 280, sky: ['#b8d8f0','#4a7aaa'], hills: '#5a8ec0', plants: '#8ab8dc', bgColor: '#2a4e78' },
-  { from: 380, sky: ['#f5b8c8','#c86890'], hills: '#9e4870', plants: '#e090b0', bgColor: '#6a2848' },
-  { from: 500, sky: ['#2a1e5c','#0a0818'], hills: '#1a1040', plants: '#3a2880', bgColor: '#050310' },
+// ========================================
+// TAGESZEIT-ZYKLUS
+// Ein vollstaendiger Tag = 600 Punkte → dann wiederholt sich der Zyklus
+// phase 0..1 beschreibt die Tageszeit kontinuierlich
+// ========================================
+const DAY_CYCLE_SCORE = 600; // Punkte pro vollstaendigem Tag
+
+// Himmelsfarben-Keyframes ueber den Tag (oben/unten des Verlaufs)
+// phase: 0=Mitternacht, 0.25=Sonnenaufgang, 0.5=Mittag, 0.75=Sonnenuntergang, 1=Mitternacht
+const SKY_KEYS = [
+  { p: 0.00, top: '#0a0820', bot: '#1a1040' },  // Mitternacht
+  { p: 0.10, top: '#1a1040', bot: '#2a1858' },  // Tiefe Nacht
+  { p: 0.20, top: '#3a1828', bot: '#8a3848' },  // Morgenroete beginnt
+  { p: 0.28, top: '#c05030', bot: '#f09058' },  // Sonnenaufgang
+  { p: 0.35, top: '#f0c870', bot: '#f0a040' },  // Goldene Stunde morgens
+  { p: 0.45, top: '#5ab0e8', bot: '#a8d8f0' },  // Spaeter Morgen
+  { p: 0.55, top: '#2a88d8', bot: '#60b8f0' },  // Mittag
+  { p: 0.65, top: '#4898c8', bot: '#90c8e8' },  // Nachmittag
+  { p: 0.72, top: '#e08040', bot: '#f0b060' },  // Goldene Stunde abends
+  { p: 0.78, top: '#c03818', bot: '#802840' },  // Sonnenuntergang
+  { p: 0.85, top: '#401838', bot: '#200c28' },  // Daemmerung
+  { p: 0.92, top: '#180c28', bot: '#100820' },  // Fruehe Nacht
+  { p: 1.00, top: '#0a0820', bot: '#1a1040' },  // Mitternacht (wieder)
 ];
 
-function randNext() { return Math.floor(Math.random() * (MAX_DROP_ANIMAL_INDEX + 1)); }
+// Huegelfarben-Keyframes
+const HILL_KEYS = [
+  { p: 0.00, c: '#0e1a08' },  // Nacht - fast schwarz-gruen
+  { p: 0.20, c: '#1a1408' },  // Morgenrot - bräunlich
+  { p: 0.28, c: '#3a2808' },  // Sonnenaufgang
+  { p: 0.40, c: '#286020' },  // Morgen - frisches Gruen
+  { p: 0.55, c: '#30782a' },  // Mittag - sattes Gruen
+  { p: 0.72, c: '#506020' },  // Nachmittag - goldiges Gruen
+  { p: 0.78, c: '#482010' },  // Sonnenuntergang
+  { p: 0.90, c: '#180c08' },  // Daemmerung
+  { p: 1.00, c: '#0e1a08' },
+];
 
-function getBiomeIndex(score) {
-  for (let i = BIOMES.length - 1; i >= 0; i--)
-    if (score >= BIOMES[i].from) return i;
-  return 0;
+const PLANT_KEYS = [
+  { p: 0.00, c: '#141e0a' },
+  { p: 0.20, c: '#281808' },
+  { p: 0.28, c: '#503010' },
+  { p: 0.40, c: '#388030' },
+  { p: 0.55, c: '#40a038' },
+  { p: 0.72, c: '#688030' },
+  { p: 0.78, c: '#602818' },
+  { p: 0.90, c: '#200e0a' },
+  { p: 1.00, c: '#141e0a' },
+];
+
+const BGBODY_KEYS = [
+  { p: 0.00, c: '#050408' },
+  { p: 0.20, c: '#120808' },
+  { p: 0.28, c: '#281408' },
+  { p: 0.40, c: '#0e2810' },
+  { p: 0.55, c: '#103020' },
+  { p: 0.72, c: '#182808' },
+  { p: 0.78, c: '#200808' },
+  { p: 0.90, c: '#080410' },
+  { p: 1.00, c: '#050408' },
+];
+
+// Interpoliert zwischen Keyframes basierend auf phase (0..1)
+function _sampleKeys(keys, phase) {
+  for (let i = 0; i < keys.length - 1; i++) {
+    const a = keys[i], b = keys[i + 1];
+    if (phase >= a.p && phase <= b.p) {
+      const t = (phase - a.p) / (b.p - a.p);
+      // Farb-Key hat entweder .c oder .top/.bot
+      if (a.c !== undefined) return lerpHex(a.c, b.c, t);
+      return [lerpHex(a.top, b.top, t), lerpHex(a.bot, b.bot, t)];
+    }
+  }
+  return keys[0].c || [keys[0].top, keys[0].bot];
 }
+
+function getDayPhase(score) {
+  return (score % DAY_CYCLE_SCORE) / DAY_CYCLE_SCORE;
+}
+
+// Gibt Biome-Index fuer Musik zurueck (basierend auf Tageszeit)
+function getBiomeIndex(score) {
+  const p = getDayPhase(score);
+  // Nacht=6(Kosmos), Morgenroete=3(Vulkan-rot), Morgen=0(Savanne),
+  // Mittag=2(Ozean-hell), Nachmittag=1(Wueste), Sonnenuntergang=3, Daemmerung=5
+  if (p < 0.22) return 6;       // Nacht → Kosmos
+  if (p < 0.32) return 3;       // Morgenroete → dramatisch
+  if (p < 0.50) return 0;       // Morgen → Savanne
+  if (p < 0.65) return 2;       // Mittag → Ozean
+  if (p < 0.75) return 1;       // Nachmittag → Wueste
+  if (p < 0.88) return 5;       // Sonnenuntergang → Kirschbluete
+  return 6;                     // Nacht → Kosmos
+}
+
+// Dummy BIOMES fuer Kompatibilitaet mit bodyBackground-Lerp
+const BIOMES = [{ bgColor: '#1a4a2e' }]; // wird dynamisch ueberschrieben
+
+function randNext() { return Math.floor(Math.random() * (MAX_DROP_ANIMAL_INDEX + 1)); }
 
 function hexToRgb(hex) {
   const n = parseInt(hex.replace('#',''), 16);
@@ -1030,63 +1353,80 @@ const pctx = previewCanvas.getContext('2d');
 pctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
 
 function drawPreview(type) {
-  pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+  const logicalSize = 48;
+  pctx.clearRect(0, 0, logicalSize, logicalSize);
   const a  = ANIMALS[type];
-  const r  = Math.min(a.r, 21 * SCALE_FACTOR);
-  const cx = previewCanvas.width / 2;
-  const cy = previewCanvas.height / 2;
+  const r  = Math.min(a.r / SCALE_FACTOR, 20); // logical pixels, not scaled
+  const cx = logicalSize / 2;
+  const cy = logicalSize / 2;
   pctx.save();
   pctx.translate(cx, cy);
+
+  // Ball fill
   pctx.beginPath();
   pctx.arc(0, 0, r, 0, Math.PI * 2);
-  pctx.fillStyle = '#' + a.color.toString(16).padStart(6, '0');
+  const hexColor = '#' + a.color.toString(16).padStart(6, '0');
+  pctx.fillStyle = hexColor;
   pctx.fill();
+
+  // Colored border matching ball color (darker, saturated shade via HSL)
+  const borderColor32 = _borderColorFor(a.color);
+  const br32 = (borderColor32 >> 16) & 0xff;
+  const bg32 = (borderColor32 >> 8) & 0xff;
+  const bb32 =  borderColor32 & 0xff;
+  pctx.lineWidth = Math.max(1, r * 0.1);
+  pctx.strokeStyle = `rgb(${br32},${bg32},${bb32})`;
+  pctx.stroke();
+
   pctx.font = `${Math.floor(r * 1.35)}px serif`;
   pctx.textAlign = 'center';
   pctx.textBaseline = 'middle';
-  pctx.fillText(a.emoji, 0, 2);
+  pctx.fillText(a.emoji, 0, 1);
   pctx.restore();
 }
 
 // ========================================
 // SCORE & HINTERGRUND
 // ========================================
+let _currentScore = 0;
+
 function updateScore(score) {
+  _currentScore = score;
   document.getElementById('score-val').textContent = score;
   const biomeIdx = getBiomeIndex(score);
-  _bgTargetBiomeIdx = biomeIdx;
   updateMusicBiome(biomeIdx);
 }
 
-// Ziel-Biome (wird per Score gesetzt, Lerp läuft im Render-Loop)
-let _bgTargetBiomeIdx = 0;
-let _bgBodyColor      = BIOMES[0].bgColor;
+// Body-Hintergrundfarbe wird direkt aus dem Tageszyklus berechnet
+let _bgBodyColor = '#050408';
 
-// Wird jeden Frame aus Background.draw() aufgerufen → body-bg & Canvas-Biome sind synchron
-function tickBodyBackground(speed) {
-  const tgt = BIOMES[_bgTargetBiomeIdx];
-  _bgBodyColor = lerpHex(_bgBodyColor, tgt.bgColor, speed);
+// Wird jeden Frame aus Background.draw() aufgerufen
+function tickBodyBackground(score, speed) {
+  const phase = getDayPhase(score);
+  const targetBg = _sampleKeys(BGBODY_KEYS, phase);
+  _bgBodyColor = lerpHex(_bgBodyColor, targetBg, speed);
   document.body.style.background = _bgBodyColor;
   const bg = document.getElementById('dynamic-bg');
   if (bg) {
-    bg.style.background = `radial-gradient(ellipse at 40% 40%, 
-      ${tgt.sky[0]} 0%, 
-      ${tgt.sky[1]} 45%, 
-      ${tgt.hills} 75%, 
-      ${tgt.plants} 100%)`;
+    const sky = _sampleKeys(SKY_KEYS, phase);
+    bg.style.background = `radial-gradient(ellipse at 35% 35%,
+      ${sky[0]}cc 0%,
+      ${sky[1]}aa 40%,
+      ${_bgBodyColor}88 70%,
+      ${_bgBodyColor} 100%)`;
   }
 }
 
-// Einmalig beim Start aufrufen (kein Lerp, sofortiger Sprung)
+// Einmalig beim Start / Reset aufrufen
 function updateDynamicBackground(score) {
-  _bgTargetBiomeIdx = getBiomeIndex(score);
-  _bgBodyColor = BIOMES[_bgTargetBiomeIdx].bgColor;
+  const phase = getDayPhase(score);
+  _bgBodyColor = _sampleKeys(BGBODY_KEYS, phase);
   document.body.style.background = _bgBodyColor;
   const bg = document.getElementById('dynamic-bg');
   if (bg) {
-    const b = BIOMES[_bgTargetBiomeIdx];
-    bg.style.background = `radial-gradient(ellipse at 40% 40%, 
-      ${b.sky[0]} 0%, ${b.sky[1]} 45%, ${b.hills} 75%, ${b.plants} 100%)`;
+    const sky = _sampleKeys(SKY_KEYS, phase);
+    bg.style.background = `radial-gradient(ellipse at 40% 40%,
+      ${sky[0]} 0%, ${sky[1]} 45%, ${_bgBodyColor} 75%, ${_bgBodyColor} 100%)`;
   }
 }
 
@@ -1110,8 +1450,11 @@ function initMergeBar() {
     cell.id = 'mc-' + i;
 
     const cv    = document.createElement('canvas');
-    cv.width    = cellSize;
-    cv.height   = cellSize;
+    const dpr   = window.devicePixelRatio || 1;
+    cv.width    = cellSize * dpr;
+    cv.height   = cellSize * dpr;
+    cv.style.width  = cellSize + 'px';
+    cv.style.height = cellSize + 'px';
 
     const arrow = document.createElement('span');
     arrow.className = 'merge-arrow';
@@ -1122,6 +1465,7 @@ function initMergeBar() {
     mergeBar.appendChild(cell);
 
     const ctx = cv.getContext('2d');
+    ctx.scale(dpr, dpr);
     mergeCells.push({ canvas: cv, ctx, cell, size: cellSize });
     drawMergeCell(i, cellSize, ctx);
   });
@@ -1134,17 +1478,29 @@ function drawMergeCell(i, size, ctx) {
   const r  = size * 0.42;
 
   ctx.clearRect(0, 0, size, size);
+
+  // Fill
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = '#' + a.color.toString(16).padStart(6, '0');
   ctx.fill();
 
+  // Farbiger Rand mit echtem Kontrast
+  const borderColor32 = _borderColorFor(a.color);
+  const borderR = (borderColor32 >> 16) & 0xff;
+  const borderG = (borderColor32 >> 8) & 0xff;
+  const borderB =  borderColor32 & 0xff;
+  ctx.lineWidth = Math.max(1, r * 0.1);
+  ctx.strokeStyle = `rgb(${borderR},${borderG},${borderB})`;
+  ctx.stroke();
+
   const fontSize = Math.round(r * 1.6);
   ctx.font = `${fontSize}px serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0,0,0,0.5)';
-  ctx.shadowBlur = 3;
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 2;
+  ctx.fillStyle = '#000'; // reset fillStyle for shadow trick, then draw emoji
   ctx.fillText(a.emoji, cx, cy + 1);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
@@ -1204,6 +1560,22 @@ menuMuteBtn.onclick = () => {
   else       startBgMusic();
 };
 
+// Lautstärkeregler
+document.getElementById('slider-music').addEventListener('input', function() {
+  musicVolume = this.value / 100;
+  document.getElementById('label-music').textContent = this.value + '%';
+  if (_masterGain) {
+    const ctx = getAudioCtx();
+    _masterGain.gain.cancelScheduledValues(ctx.currentTime);
+    _masterGain.gain.setValueAtTime(muted ? 0 : musicVolume, ctx.currentTime);
+  }
+});
+
+document.getElementById('slider-sfx').addEventListener('input', function() {
+  sfxVolume = this.value / 100;
+  document.getElementById('label-sfx').textContent = this.value + '%';
+});
+
 // ========================================
 // PHASER SCENE KLASSEN
 // ========================================
@@ -1216,11 +1588,12 @@ class Background {
     this.tex     = scene.textures.createCanvas('bg', W, H);
     this.img     = scene.add.image(0, 0, 'bg').setOrigin(0, 0).setDepth(-10);
     this.time    = 0;
-    this.sky0    = BIOMES[0].sky[0];
-    this.sky1    = BIOMES[0].sky[1];
-    this.hills   = BIOMES[0].hills;
-    this.plants  = BIOMES[0].plants;
-    this._frame  = 0;  // Frame-Zähler für Throttling
+    this._frame  = 0;
+    // Interpolierte Himmelsfarben (werden per Lerp sanft angepasst)
+    this.sky0    = '#0a0820';
+    this.sky1    = '#1a1040';
+    this.hills   = '#0e1a08';
+    this.plants  = '#141e0a';
   }
 
   draw(score, delta) {
@@ -1228,39 +1601,222 @@ class Background {
     this.time += 0.004 * dt;
     this._frame++;
 
-    const tgt = BIOMES[getBiomeIndex(score)];
-    const spd = 0.012 * dt;
-    this.sky0   = lerpHex(this.sky0,  tgt.sky[0],  spd);
-    this.sky1   = lerpHex(this.sky1,  tgt.sky[1],  spd);
-    this.hills  = lerpHex(this.hills, tgt.hills,   spd);
-    this.plants = lerpHex(this.plants, tgt.plants, spd);
-    tickBodyBackground(spd);
+    const phase = getDayPhase(score);
+    const spd   = 0.010 * dt;
 
-    // Hintergrund nur jeden 2. Frame neu zeichnen (spart ~30% GPU auf Mobile)
+    // Sanft zu Zielfarben lerpen
+    const skyTarget = _sampleKeys(SKY_KEYS, phase);
+    this.sky0   = lerpHex(this.sky0,   skyTarget[0], spd);
+    this.sky1   = lerpHex(this.sky1,   skyTarget[1], spd);
+    this.hills  = lerpHex(this.hills,  _sampleKeys(HILL_KEYS,  phase), spd);
+    this.plants = lerpHex(this.plants, _sampleKeys(PLANT_KEYS, phase), spd);
+    tickBodyBackground(score, spd);
+
     if (this._frame % 2 !== 0) return;
 
-    const ctx  = this.ctx;
+    const ctx = this.ctx;
     ctx.clearRect(0, 0, W, H);
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
+
+    // Himmelsverlauf
+    const grad = ctx.createLinearGradient(0, 0, 0, H * 0.72);
     grad.addColorStop(0, this.sky0);
-    grad.addColorStop(0.55, lerpHex(this.sky0, this.sky1, 0.55));
     grad.addColorStop(1, this.sky1);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.32)';
-    for (let i = 0; i < 8; i++) {  // 12 → 8 Partikel
-      const x = (i * 110 * SCALE_FACTOR + this.time * 28 * SCALE_FACTOR) % W;
-      const y = 55 * SCALE_FACTOR + Math.sin(i * 1.4 + this.time * 1.1) * 28 * SCALE_FACTOR;
-      ctx.beginPath();
-      ctx.arc(x, y, 2.5 * SCALE_FACTOR, 0, Math.PI * 2);
-      ctx.fill();
+    // Sterne (nachts sichtbar)
+    this._drawStars(ctx, phase);
+
+    // Sonne/Mond - Position von links (phase=0.2) nach rechts (phase=0.8) über den Tag
+    this._drawCelestialBody(ctx, phase);
+
+    // Atmosphaerische Effekte
+    this._drawAtmosphere(ctx, phase);
+
+    // Wolken (tagsüber)
+    if (phase > 0.30 && phase < 0.85) {
+      const cloudAlpha = Math.min(1, Math.min(phase - 0.30, 0.85 - phase) * 8) * 0.5;
+      this._drawClouds(ctx, this.time, `rgba(255,255,255,${cloudAlpha})`);
     }
 
     this._hill(ctx, 125 * SCALE_FACTOR, 0.65, this.hills,  0.88);
     this._hill(ctx, 82  * SCALE_FACTOR, 1.15, this.plants, 1.0);
     this.tex.getContext().drawImage(this.off, 0, 0);
     this.tex.refresh();
+  }
+
+  _drawStars(ctx, phase) {
+    // Sterne: sichtbar von phase 0..0.25 und 0.80..1.0
+    let starAlpha = 0;
+    if (phase < 0.25)       starAlpha = 1 - phase / 0.25;
+    else if (phase > 0.80)  starAlpha = (phase - 0.80) / 0.20;
+    if (starAlpha <= 0) return;
+
+    const STARS = [
+      [0.12,0.08],[0.34,0.05],[0.55,0.12],[0.72,0.04],[0.88,0.09],
+      [0.22,0.18],[0.47,0.06],[0.63,0.16],[0.80,0.14],[0.05,0.20],
+      [0.40,0.22],[0.68,0.07],[0.91,0.19],[0.15,0.14],[0.58,0.21],
+      [0.76,0.11],[0.29,0.09],[0.84,0.06],[0.50,0.17],[0.10,0.03],
+    ];
+    ctx.save();
+    STARS.forEach(([fx, fy], i) => {
+      const twinkle = 0.5 + 0.5 * Math.sin(this.time * 1.8 + i * 2.3);
+      const a = starAlpha * (0.4 + twinkle * 0.6);
+      const r = (0.8 + (i % 3) * 0.7) * SCALE_FACTOR;
+      ctx.fillStyle = `rgba(220,210,255,${a})`;
+      ctx.beginPath();
+      ctx.arc(fx * W, fy * H, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  _drawCelestialBody(ctx, phase) {
+    // Sonne: phase 0.22..0.82 → bewegt sich von links nach rechts
+    // Mond: phase 0.0..0.22 und 0.82..1.0 → auch von links nach rechts, aber naechtlich
+
+    // Horizontale Position: 0=links, 1=rechts
+    // Sonne: kommt bei 0.22 von links (x=0.05) und geht bei 0.80 rechts unter (x=0.95)
+    const sunPhase = (phase - 0.22) / (0.80 - 0.22); // 0..1 waehrend Sonne sichtbar
+    const isSunVisible = phase >= 0.22 && phase <= 0.82;
+
+    if (isSunVisible) {
+      const sx = 0.05 + sunPhase * 0.90; // x: 5%..95% der Breite
+      // Bogen: mittags hoch (y=0.06), morgens/abends tief (y=0.22)
+      const arcT = Math.sin(sunPhase * Math.PI); // 0 an den Enden, 1 in der Mitte
+      const sy = 0.22 - arcT * 0.17;
+
+      // Sonnengrösse: mittags etwas kleiner (weiter weg), morgens/abends groesser
+      const sr = (20 + (1 - arcT) * 8) * SCALE_FACTOR;
+
+      // Farbe je Tageszeit
+      let inner, outer;
+      if (sunPhase < 0.12 || sunPhase > 0.88) {
+        inner = '#ffcc88'; outer = '#ff8820'; // Sonnenaufgang/-untergang: orange
+      } else if (sunPhase < 0.25 || sunPhase > 0.75) {
+        inner = '#fff0a0'; outer = '#ffcc40'; // goldene Stunde: gold
+      } else {
+        inner = '#fffde0'; outer = '#ffe060'; // Mittag: hell-gelb
+      }
+
+      // Atmosphaerischer Schein beim Auf-/Untergang
+      if (sunPhase < 0.15 || sunPhase > 0.85) {
+        const grd = ctx.createRadialGradient(sx*W, sy*H, 0, sx*W, sy*H, sr * 5);
+        const edge = sunPhase < 0.15 ? sunPhase / 0.15 : (1 - sunPhase) / 0.15;
+        grd.addColorStop(0, `rgba(255,140,40,${0.35 * (1 - edge + 0.3)})`);
+        grd.addColorStop(1, 'rgba(255,100,0,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      this._drawSun(ctx, sx * W, sy * H, sr, inner, outer);
+    }
+
+    // Mond: sichtbar bei phase < 0.20 und > 0.82
+    let moonAlpha = 0, moonX = 0, moonY = 0;
+    if (phase < 0.20) {
+      // Mond sinkt: phase 0 → x=0.75, phase 0.20 → x=0.95 (geht rechts unter)
+      moonX = 0.75 + (phase / 0.20) * 0.20;
+      moonY = 0.08 + (phase / 0.20) * 0.10; // sinkt leicht
+      moonAlpha = phase < 0.17 ? 1 : 1 - (phase - 0.17) / 0.03;
+    } else if (phase > 0.82) {
+      // Mond steigt auf: phase 0.82 → x=0.05, phase 1.0 → x=0.30
+      const mp = (phase - 0.82) / 0.18;
+      moonX = 0.05 + mp * 0.25;
+      moonY = 0.18 - mp * 0.12; // steigt auf
+      moonAlpha = mp < 0.1 ? mp / 0.1 : 1;
+    }
+
+    if (moonAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = moonAlpha;
+      this._drawMoon(ctx, moonX * W, moonY * H, 18 * SCALE_FACTOR);
+      ctx.restore();
+    }
+  }
+
+  _drawAtmosphere(ctx, phase) {
+    const t = this.time;
+    // Morgenrot / Abendrot Horizont-Glow
+    if ((phase > 0.20 && phase < 0.35) || (phase > 0.70 && phase < 0.85)) {
+      const frac = phase < 0.5
+        ? Math.min(1, (phase - 0.20) / 0.08) * Math.min(1, (0.35 - phase) / 0.05)
+        : Math.min(1, (phase - 0.70) / 0.05) * Math.min(1, (0.85 - phase) / 0.05);
+      const grd = ctx.createLinearGradient(0, H * 0.45, 0, H * 0.72);
+      grd.addColorStop(0, `rgba(255,100,20,${frac * 0.35})`);
+      grd.addColorStop(1, `rgba(255,60,0,0)`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Mittags-Dunst
+    if (phase > 0.45 && phase < 0.65) {
+      const f = Math.min(1, Math.min(phase-0.45, 0.65-phase) * 10);
+      ctx.fillStyle = `rgba(200,230,255,${f * 0.08})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Nacht-Nebel am Horizont
+    if (phase < 0.25 || phase > 0.82) {
+      const f = phase < 0.25 ? 1 - phase / 0.25 : (phase - 0.82) / 0.18;
+      const grd = ctx.createLinearGradient(0, H * 0.60, 0, H);
+      grd.addColorStop(0, `rgba(20,10,40,0)`);
+      grd.addColorStop(1, `rgba(20,10,40,${f * 0.4})`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  _drawSun(ctx, x, y, r, inner, outer) {
+    ctx.save();
+    ctx.translate(x, y);
+    // Strahlenkranz
+    ctx.rotate(this.time * 0.25);
+    ctx.fillStyle = 'rgba(255,240,100,0.18)';
+    for (let i = 0; i < 8; i++) {
+      ctx.rotate(Math.PI / 4);
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.lineTo(r * 0.55, -r * 0.13); ctx.lineTo(r * 1.75, 0); ctx.lineTo(r * 0.55, r * 0.13);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    // Halo
+    const halo = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 2.8);
+    halo.addColorStop(0, `${outer}55`); halo.addColorStop(1, `${outer}00`);
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(x, y, r * 2.8, 0, Math.PI * 2); ctx.fill();
+    // Sonnenscheibe
+    const sg = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, 0, x, y, r);
+    sg.addColorStop(0, inner); sg.addColorStop(1, outer);
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  _drawMoon(ctx, x, y, r) {
+    // Mondscheibe mit Halo
+    const halo = ctx.createRadialGradient(x, y, r, x, y, r * 2.8);
+    halo.addColorStop(0, 'rgba(200,195,160,0.20)'); halo.addColorStop(1, 'rgba(200,195,160,0)');
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, r * 2.8, 0, Math.PI * 2); ctx.fill();
+    // Mondscheibe
+    ctx.fillStyle = '#e0d8b8';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    // Sichel-Abdeckung
+    ctx.fillStyle = this.sky0;
+    ctx.beginPath(); ctx.arc(x + r * 0.36, y - r * 0.10, r * 0.78, 0, Math.PI * 2); ctx.fill();
+  }
+
+  _drawClouds(ctx, t, color) {
+    for (let i = 0; i < 4; i++) {
+      const x = (i * 130 * SCALE_FACTOR + t * 9 * SCALE_FACTOR) % (W + 80 * SCALE_FACTOR) - 40 * SCALE_FACTOR;
+      const y = (22 + i * 18) * SCALE_FACTOR;
+      const r = (15 + i * 8) * SCALE_FACTOR;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x,           y,           r,         0, Math.PI * 2);
+      ctx.arc(x + r * 0.9, y - r * 0.2, r * 0.76, 0, Math.PI * 2);
+      ctx.arc(x + r * 1.8, y,           r * 0.62,  0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   _hill(ctx, h, spd, color, alpha) {
@@ -1282,6 +1838,7 @@ class Background {
   }
 }
 
+
 class BallManager {
   constructor(scene) {
     this.scene = scene;
@@ -1300,12 +1857,13 @@ class BallManager {
   spawn(x, y, type, scale = 0.6) {
     const a    = ANIMALS[type];
     const body = this.scene.matter.add.circle(x, y, a.r, {
-      restitution:  0.18,
-      friction:     0.5,
-      frictionStatic: 0.5,
-      density:      0.0012,
-      frictionAir:  0.011 - (a.r / (98 * SCALE_FACTOR)) * 0.004,
-      slop:         0.3 * SCALE_FACTOR,
+      restitution:    0.30,
+      friction:       0.12,
+      frictionStatic: 0.08,
+      frictionAir:    0.008,
+      density:        0.002,
+      slop:           0.02,
+      label:          'ball',
     });
     body._type      = type;
     body._merged    = false;
@@ -1313,10 +1871,18 @@ class BallManager {
 
     const container = this.scene.add.container(x, y).setDepth(1);
     const circle    = this.scene.add.graphics();
+
+    // Farbiger Rand mit echtem Kontrast zur Ballfarbe
+    const borderHex = _borderColorFor(a.color);
+
+    // Smooth filled circle
     circle.fillStyle(a.color, 1);
     circle.fillCircle(0, 0, a.r);
-    circle.fillStyle(0xffffff, 0.18);
-    circle.fillCircle(-a.r * 0.22, -a.r * 0.28, a.r * 0.46);
+
+    // Colored border (darker shade of ball color, not black)
+    const borderWidth = Math.max(2, a.r * 0.09);
+    circle.lineStyle(borderWidth, borderHex, 0.85);
+    circle.strokeCircle(0, 0, a.r - borderWidth * 0.5);
 
     const label = this.scene.add.text(0, 1, a.emoji, {
       fontSize:   Math.floor(a.r * 1.4) + 'px',
@@ -1346,6 +1912,8 @@ class BallManager {
       b.container.setScale(b._scale);
       b.container.setRotation(b.body.angle);
     }
+    // Tempo anpassen: hoeher der Stapel = schnellere Musik
+    updateMusicTempo(this.balls);
   }
 
   clear() {
@@ -1356,19 +1924,76 @@ class BallManager {
     this.balls = [];
   }
 
-  checkGameOver() {
-    const now = Date.now();
-    // Nach einem Merge: kurze globale Gnadenfrist für alle Bälle
-    if (this._lastMergeTime && now - this._lastMergeTime < 1200) return false;
+  // Tauscht nur Farbe + Emoji aus, Physik-Body bleibt an Ort und Stelle
+  refreshVisuals() {
     for (const b of this.balls) {
       if (!b.body) continue;
-      if (now - b.body._spawnTime < 2200) continue;
+      const type = b.body._type;
+      const a    = ANIMALS[Math.min(type, ANIMALS.length - 1)];
+
+      // Container-Kinder: [0] = Grafik-Kreis, [1] = Emoji-Label
+      const circle = b.container.list[0];
+      const label  = b.container.list[1];
+
+      if (circle && circle.clear) {
+        circle.clear();
+        circle.fillStyle(a.color, 1);
+        circle.fillCircle(0, 0, a.r);
+        const borderHex = _borderColorFor(a.color);
+        const borderWidth = Math.max(2, a.r * 0.09);
+        circle.lineStyle(borderWidth, borderHex, 0.85);
+        circle.strokeCircle(0, 0, a.r - borderWidth * 0.5);
+      }
+      if (label && label.setText) {
+        label.setText(a.emoji).setFontSize(Math.floor(a.r * 1.4) + 'px');
+      }
+    }
+  }
+
+  // Gibt zurueck: 'clear' | 'warning' | 'gameover'
+  checkDangerState() {
+    const now = Date.now();
+    // Nach einem Merge: grosszuegige Gnadenfrist
+    if (this._lastMergeTime && now - this._lastMergeTime < 2000) return 'clear';
+
+    let dangerBall = false;
+    for (const b of this.balls) {
+      if (!b.body) continue;
+      // Frisch gespawnte Baelle ignorieren (3 s)
+      if (now - b.body._spawnTime < 3000) continue;
       const ballRadius = ANIMALS[b.body._type].r;
       const ballTop    = b.body.position.y - ballRadius;
-      // Vollständig über der Gefahrenlinie und nahezu still
-      if (ballTop < GAME_OVER_LINE && Math.hypot(b.body.velocity.x, b.body.velocity.y) < 0.8) return true;
+      const vel        = Math.hypot(b.body.velocity.x, b.body.velocity.y);
+      // Ball deutlich ueber der Linie und nahezu still
+      if (ballTop < GAME_OVER_LINE - 4 && vel < 0.6) {
+        dangerBall = true;
+        break;
+      }
     }
-    return false;
+
+    if (!dangerBall) {
+      this._dangerSince = null;
+      return 'clear';
+    }
+
+    if (!this._dangerSince) this._dangerSince = now;
+    const elapsed = now - this._dangerSince;
+
+    // 4 Sekunden Countdown bevor echtes Game Over
+    if (elapsed < 4000) return 'warning';
+    return 'gameover';
+  }
+
+  // Wird vom Merge-System aufgerufen um Countdown zu resetten
+  resetDanger() {
+    this._dangerSince = null;
+    this._lastMergeTime = Date.now();
+  }
+
+  // Wie viele Sekunden noch bis Game Over (0-4)
+  dangerSecondsLeft() {
+    if (!this._dangerSince) return 4;
+    return Math.max(0, 4 - (Date.now() - this._dangerSince) / 1000);
   }
 }
 
@@ -1492,13 +2117,13 @@ class GameScene extends Phaser.Scene {
   }
 
   _initPhysics() {
-    this.matter.world.setGravity(0, 0.9);
-    this.matter.world.setBounds(0, 0, W, H + 100 * SCALE_FACTOR, 32 * SCALE_FACTOR);
-    this.matter.add.rectangle(W / 2, H + 30 * SCALE_FACTOR, W + 200 * SCALE_FACTOR, 60 * SCALE_FACTOR, {
-      isStatic: true, friction: 0.7, restitution: 0.1,
-    });
-    this.matter.add.rectangle(-30 * SCALE_FACTOR,      H / 2, 60 * SCALE_FACTOR, H * 2, { isStatic: true, friction: 0.4 });
-    this.matter.add.rectangle(W + 30 * SCALE_FACTOR,   H / 2, 60 * SCALE_FACTOR, H * 2, { isStatic: true, friction: 0.4 });
+    this.matter.world.setGravity(0, 1.4);
+    // Wände und Boden mit sehr niedriger Reibung → kein Kleben
+    const wallOpts = { isStatic: true, friction: 0.0, frictionStatic: 0.0, restitution: 0.1 };
+    this.matter.add.rectangle(W / 2, H + 30 * SCALE_FACTOR, W + 200 * SCALE_FACTOR, 60 * SCALE_FACTOR,
+      { ...wallOpts, friction: 0.3, restitution: 0.15 });  // Boden etwas griffiger
+    this.matter.add.rectangle(-28 * SCALE_FACTOR, H / 2, 56 * SCALE_FACTOR, H * 3, wallOpts);
+    this.matter.add.rectangle(W + 28 * SCALE_FACTOR, H / 2, 56 * SCALE_FACTOR, H * 3, wallOpts);
   }
 
   _initGraphics() {
@@ -1512,6 +2137,16 @@ class GameScene extends Phaser.Scene {
       fontFamily: 'serif',
       fontSize:   Math.floor(28 * SCALE_FACTOR) + 'px',
     }).setOrigin(0.5, 0.5).setDepth(4);
+
+    // Countdown-Anzeige (erscheint bei Gefahr)
+    this._countdownGfx  = this.add.graphics().setDepth(12);
+    this._countdownText = this.add.text(W / 2, GAME_OVER_LINE - 22 * SCALE_FACTOR, '', {
+      fontFamily: 'system-ui',
+      fontSize:   Math.floor(15 * SCALE_FACTOR) + 'px',
+      fontStyle:  'bold',
+      color:      '#ff6666',
+    }).setOrigin(0.5, 0.5).setDepth(13).setAlpha(0);
+    this._warningActive = false;
   }
 
   _initInput() {
@@ -1585,6 +2220,7 @@ class GameScene extends Phaser.Scene {
 
         this.time.delayedCall(16, () => {
           this._lastMergeTime = Date.now();
+          this.ballMgr.resetDanger();
           this.effects.spawnMerge(mx, my, nt);
           this.ballMgr.remove(bodyA);
           this.ballMgr.remove(bodyB);
@@ -1603,6 +2239,7 @@ class GameScene extends Phaser.Scene {
 
   _reset() {
     stopBgMusic();
+    resetBgMusicBiome();
     this.ballMgr.clear();
     if (this.overlayContainer) { this.overlayContainer.destroy(); this.overlayContainer = null; }
     this.score         = 0;
@@ -1610,10 +2247,14 @@ class GameScene extends Phaser.Scene {
     this.canDrop       = true;
     this.gameOverShown = false;
     this._lastMergeTime = 0;
+    this._warningActive = false;
+    this._lastWarnShake = 0;
+    this._hideCountdown();
     this.currentType   = randNext();
     this.nextType      = randNext();
     drawPreview(this.nextType);
     updateScore(0);
+    updateDynamicBackground(0);
     startBgMusic();
   }
 
@@ -1646,7 +2287,18 @@ class GameScene extends Phaser.Scene {
 
   _drawDangerLine() {
     this.lineGfx.clear();
-    this.lineGfx.lineStyle(2 * SCALE_FACTOR, 0xff4444, 0.7);
+    // Pulsieren wenn Warnung aktiv
+    let alpha = 0.7;
+    let color = 0xff4444;
+    if (this._warningActive) {
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 180);
+      alpha = 0.6 + pulse * 0.4;
+      color = 0xff2222;
+      // Glow hinter der Linie
+      this.lineGfx.lineStyle(6 * SCALE_FACTOR, 0xff0000, 0.18 + pulse * 0.18);
+      this._dashedLine(this.lineGfx, 0, GAME_OVER_LINE, W, GAME_OVER_LINE, 10 * SCALE_FACTOR, 6 * SCALE_FACTOR);
+    }
+    this.lineGfx.lineStyle(2 * SCALE_FACTOR, color, alpha);
     this._dashedLine(this.lineGfx, 0, GAME_OVER_LINE, W, GAME_OVER_LINE, 10 * SCALE_FACTOR, 6 * SCALE_FACTOR);
   }
 
@@ -1657,12 +2309,17 @@ class GameScene extends Phaser.Scene {
     const x = Phaser.Math.Clamp(this.mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
     const y = GAME_OVER_LINE - a.r - DROP_Y_OFFSET;
 
-    this.previewGfx.fillStyle(0x000000, 0.18);
+    // Schatten
+    this.previewGfx.fillStyle(0x000000, 0.15);
     this.previewGfx.fillEllipse(x, y + a.r + 5 * SCALE_FACTOR, a.r * 1.7, a.r * 0.38);
-    this.previewGfx.fillStyle(a.color, 0.9);
+    // Pastellkreis
+    this.previewGfx.fillStyle(a.color, 0.92);
     this.previewGfx.fillCircle(x, y, a.r);
-    this.previewGfx.fillStyle(0xffffff, 0.2);
-    this.previewGfx.fillCircle(x - a.r * 0.22, y - a.r * 0.26, a.r * 0.46);
+    // Farbige Umrandung (dunklere Variante der Ballfarbe)
+    const borderHexP = _borderColorFor(a.color);
+    const bwP = Math.max(2, a.r * 0.09);
+    this.previewGfx.lineStyle(bwP, borderHexP, 0.85);
+    this.previewGfx.strokeCircle(x, y, a.r - bwP * 0.5);
 
     this.previewLabel.setVisible(true).setPosition(x, y + 2)
       .setText(a.emoji).setFontSize(Math.floor(a.r * 1.4));
@@ -1794,19 +2451,49 @@ class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     this.bg.draw(this.score, delta);
-    // Body-Hintergrund synchron zum Canvas-Biome lerpen (jeder Frame)
-    _bgBodyColor = lerpHex(_bgBodyColor, BIOMES[getBiomeIndex(this.score)].bgColor, 0.012);
-    document.body.style.background = _bgBodyColor;
     this._drawGuide();
     this._drawDangerLine();
     this._drawPreviewBall();
     this.ballMgr.draw(delta);
 
-    if (!this.gameOver && this.ballMgr.checkGameOver()) {
-      this.gameOver = true;
-      this.canDrop  = false;
+    if (this.gameOver) return;
+
+    const danger = this.ballMgr.checkDangerState();
+
+    if (danger === 'gameover') {
+      this.gameOver  = true;
+      this.canDrop   = false;
+      this._hideCountdown();
       this._showGameOver();
+      return;
     }
+
+    if (danger === 'warning') {
+      const secsLeft = this.ballMgr.dangerSecondsLeft();
+      this._showCountdown(secsLeft);
+      // Leichte Kamera-Warnung alle ~1 s
+      if (!this._lastWarnShake || time - this._lastWarnShake > 900) {
+        this.cameras.main.shake(180, 0.003);
+        this._lastWarnShake = time;
+      }
+    } else {
+      this._hideCountdown();
+    }
+  }
+
+  _showCountdown(secsLeft) {
+    const frac = secsLeft / 4; // 1 = viel Zeit, 0 = sofort Game Over
+    const alpha = 0.55 + (1 - frac) * 0.45; // wird krueftiger
+    this._countdownText
+      .setText(`⚠️  Noch ${Math.ceil(secsLeft)} s – merge jetzt!`)
+      .setAlpha(alpha);
+    this._warningActive = true;
+  }
+
+  _hideCountdown() {
+    if (!this._warningActive) return;
+    this._countdownText.setAlpha(0).setText('');
+    this._warningActive = false;
   }
 }
 
@@ -1842,16 +2529,16 @@ function applyCategory(key, scene) {
   getAnimalsForCategory(key).forEach(a => ANIMALS.push(a));
   refreshCatGrids();
   if (document.getElementById('merge-bar').children.length > 0) initMergeBar();
-  if (scene) {
-    // Nur Bälle leeren + neue Typen vergeben – KEIN vollstaendiger Reset
-    // Score, gameOver-State und Physik bleiben erhalten
-    scene.ballMgr && scene.ballMgr.clear();
-    if (!scene.gameOver) {
-      scene.currentType = randNext();
-      scene.nextType    = randNext();
-      scene.canDrop     = true;
-      drawPreview(scene.nextType);
-    }
+
+  if (scene && !scene.gameOver) {
+    // Bestehende Bälle: nur Grafik aktualisieren, Physik-Body bleibt unberührt
+    scene.ballMgr.refreshVisuals();
+
+    // Neuen Drop-Typ wählen
+    scene.currentType = randNext();
+    scene.nextType    = randNext();
+    scene.canDrop     = true;
+    drawPreview(scene.nextType);
   }
 }
 
@@ -1889,12 +2576,12 @@ function startGameAfterUserTap() {
     physics: {
       default: 'matter',
       matter: {
-        gravity:            { y: 0.9 },
+        gravity:            { y: 1.4 },   // stärkere Schwerkraft → Bälle fallen verlässlicher
         debug:              false,
-        enableSleeping:     true,     // schlafende Bälle brauchen keine Physik-Ticks
-        positionIterations: 6,        // reduziert von 10 → weniger CPU pro Frame
-        velocityIterations: 4,
-        constraintIterations: 2,
+        enableSleeping:     false,         // AUS: schlafende Bälle bleiben in der Luft hängen
+        positionIterations: 10,            // hoch → keine Überlappungen, kein "auf der Mitte stehen"
+        velocityIterations: 8,
+        constraintIterations: 4,
       },
     },
     scene: [GameScene],
