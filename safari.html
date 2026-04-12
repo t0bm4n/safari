@@ -488,6 +488,9 @@
         <span id="label-sfx" style="font-size:12px;opacity:0.6;min-width:30px;text-align:right;">85%</span>
       </div>
 
+      <div class="cat-section-label">🎶 Musik-Titel</div>
+      <div id="music-track-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
+
       <div class="cat-section-label">Emoji-Kategorie</div>
       <div id="menu-cat-grid" class="cat-grid"></div>
       <button class="menu-btn" id="menu-close" style="justify-content:center; opacity:0.7;">✕&nbsp; Schließen</button>
@@ -503,7 +506,7 @@
 // ========================================
 // VERSIONSNUMMER
 // ========================================
-const VERSION = "0.1.3";
+const VERSION = "0.1.9";
 
 // ========================================
 // SOUND-KONFIGURATION
@@ -519,7 +522,7 @@ const SOUND_FILES = {
 };
 
 // Auf true setzen, um die eingebauten Synth-Sounds zu nutzen (ohne Dateien)
-const USE_DEFAULT_SOUNDS = true;
+const USE_DEFAULT_SOUNDS = false;
 
 // ========================================
 // TIER-DROP-LIMIT
@@ -530,7 +533,7 @@ const MAX_DROP_ANIMAL_INDEX = 3;
 // NINTENDO SUPER AUDIO ENGINE 🎮
 // ========================================
 let muted = false;
-let musicVolume = 0.65;   // 0..1
+let musicVolume = 0.85;   // 0..1
 let sfxVolume   = 0.85;   // 0..1
 let audioCtx = null;
 
@@ -718,7 +721,135 @@ const BIOME_TRACKS = [
   },
 ];
 
-// Separater Crossfade-Gain (nur für Biome-Übergang, NICHT für Lautstärke)
+// ── Drei wählbare Musiktitel ────────────────────────────────────────────────
+// Jeder Track hat 4 Sections (A B C D) die rotieren → mehr Abwechslung
+// Noten in Hz. null = Pause. drums: 1=Kick, 2=Hihat, 3=Snare, 4=beide
+const MUSIC_TRACKS = {
+  town_chill: {
+    label: 'Town Chill',
+    icon:  '🏘️',
+    // Laid-back Jazz-Lofi Feeling – C-Dur / A-Moll, synkopiert, warm
+    sections: [
+      { // A: Ruhige Intro-Melodie
+        tempo: 560,
+        mel:  [392,null,440,null,392,330,null,294, 330,null,294,262,null,294,null,330],
+        mel2: [null,247,null,247,null,null,196,null, null,196,null,null,175,null,196,null],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [131,null,null,165,null,131,null,null,  110,null,null,131,null,110,null,null],
+        drums:[1,0,0,2, 0,1,0,2, 1,0,0,2, 0,1,0,2],
+      },
+      { // B: Gegenmelodie
+        tempo: 560,
+        mel:  [330,null,294,330,null,392,null,440, 392,null,330,null,294,null,330,null],
+        mel2: [null,196,null,null,247,null,247,null, null,247,null,196,null,196,null,247],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [98, null,null,110,null,null,131,null,  110,null,null,98,null,null,110,null],
+        drums:[1,0,0,2, 1,0,1,2, 0,0,1,2, 1,0,0,2],
+      },
+      { // C: Höhepunkt – Akkordmelodie
+        tempo: 540,
+        mel:  [523,null,494,null,440,null,392,null, 440,494,523,null,587,null,523,null],
+        mel2: [null,330,null,311,null,262,null,247, null,null,null,330,null,370,null,330],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [131,null,165,null,131,null,110,null,  131,null,131,null,165,null,131,null],
+        drums:[1,0,1,2, 0,0,1,2, 1,0,1,2, 0,1,0,2],
+      },
+      { // D: Ruhiger Ausklang, spärlich
+        tempo: 600,
+        mel:  [262,null,null,294,null,null,330,null, null,294,null,null,262,null,null,null],
+        mel2: [null,null,196,null,null,175,null,null, 196,null,null,175,null,null,165,null],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [98, null,null,null,131,null,null,null,  98,null,null,null,110,null,null,null],
+        drums:[1,0,0,0, 2,0,0,0, 1,0,0,2, 0,0,0,0],
+      },
+    ],
+  },
+
+  power: {
+    label: 'Power',
+    icon:  '⚡',
+    // Hard-driving Rock/EDM – A-Moll, treibende Bassline, Synth-Leads, brutale Drums
+    sections: [
+      { // A: Intro Riff – straight power
+        tempo: 240,
+        mel:  [440,null,440,null,415,null,392,null, 415,null,392,null,370,392,null,349],
+        mel2: [null,null,null,277,null,null,null,247, null,null,null,262,null,null,233,null],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [110,null,110,null,104,110,null,null,  116,null,116,null,110,null,104,null],
+        drums:[1,0,1,3, 1,0,1,3, 1,1,1,3, 1,0,1,3],
+      },
+      { // B: Melodie-Lead – aufsteigend energisch
+        tempo: 240,
+        mel:  [392,415,440,null,494,null,523,null, 494,440,415,null,440,null,392,null],
+        mel2: [null,null,null,277,null,311,null,330, null,null,null,277,null,262,null,247],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [110,null,116,null,110,null,104,null,  110,null,116,110,null,104,null,110],
+        drums:[1,0,1,3, 1,1,0,3, 1,0,1,3, 4,0,1,3],
+      },
+      { // C: Bridge – halb leer dann Explosion
+        tempo: 240,
+        mel:  [349,null,null,370,null,null,392,null, 440,494,523,587,523,494,440,415],
+        mel2: [null,null,220,null,null,233,null,247, null,null,null,null,330,311,277,262],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [87, null,null,null,98,null,null,null,  110,null,116,null,110,null,104,null],
+        drums:[1,0,0,0, 1,0,0,0, 1,1,1,3, 4,1,1,3],
+      },
+      { // D: Breakdown – Synth-Arpeggio
+        tempo: 220,
+        mel:  [220,277,330,415,440,415,330,277, 220,262,330,392,440,392,330,262],
+        mel2: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [110,null,null,null,null,null,null,null,  110,null,null,null,null,null,null,null],
+        drums:[1,0,0,3, 0,0,1,3, 1,0,0,3, 0,1,1,3],
+      },
+    ],
+  },
+
+  fun: {
+    label: 'Fun',
+    icon:  '🎉',
+    // Bubbly Pop-Chiptune – G-Dur, synkopiert, viel Bewegung, Überraschungen
+    sections: [
+      { // A: Haupthook – eingängige Melodie
+        tempo: 340,
+        mel:  [392,null,440,494,null,523,null,494, 440,null,392,null,440,494,523,null],
+        mel2: [null,294,null,null,330,null,330,null, null,262,null,294,null,null,null,349],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [196,null,null,196,null,220,null,196,  196,null,175,null,196,null,220,null],
+        drums:[1,0,1,0, 2,0,1,2, 1,0,1,0, 2,1,0,2],
+      },
+      { // B: Call & Response – fröhlicher Dialog
+        tempo: 340,
+        mel:  [587,null,523,null,494,null,440,null, 523,587,659,null,587,523,null,494],
+        mel2: [null,370,null,330,null,311,null,294, null,null,null,415,null,null,330,null],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [196,null,220,null,196,null,175,null,  196,null,220,null,247,null,196,null],
+        drums:[1,0,0,2, 1,0,1,2, 1,1,0,2, 1,0,1,2],
+      },
+      { // C: Türkischer Anflug – orientalische Skala
+        tempo: 360,
+        mel:  [440,415,392,null,349,370,392,null, 415,440,null,466,440,415,392,null],
+        mel2: [null,null,null,262,null,null,null,247, null,null,277,null,null,null,null,233],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [110,null,null,110,null,null,110,null,  104,null,null,110,null,null,98,null],
+        drums:[1,0,1,2, 1,0,0,2, 1,0,1,2, 0,1,0,2],
+      },
+      { // D: Finale – alles raus, Konfetti-Feeling
+        tempo: 320,
+        mel:  [523,587,659,null,698,null,659,587, 523,587,659,698,784,null,698,659],
+        mel2: [null,null,null,415,null,440,null,null, null,null,null,null,null,523,null,415],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [131,null,165,null,131,null,196,null,  131,null,165,null,196,null,165,null],
+        drums:[1,0,1,2, 1,1,0,2, 1,0,1,2, 4,0,1,2],
+      },
+    ],
+  },
+};
+
+let _activeTrackKey = 'town_chill';
+let _seqSection = 0;  // Welche Section des aktuellen Tracks
+
+
 let _crossfadeGain = null;
 function _getCrossfadeGain() {
   if (_crossfadeGain) return _crossfadeGain;
@@ -764,10 +895,14 @@ function updateMusicBiome(biomeIdx) {
   }, 1050);
 }
 
+// ── Tempo via unsichtbare Y-Linien ──────────────────────────────────────────
+// 3 Schwellen: unten=langsam, mitte=normal, oben=schnell, sehr oben=sehr schnell
+// ratio: 0 = kein Ball / alles unten, 1 = Ball an der Gefahrenlinie
+let _currentStackRatio = 0;
+
 function updateMusicTempo(balls) {
   if (!balls || balls.length === 0) { _currentStackRatio = 0; return; }
   const now = Date.now();
-  // Nur ruhende Bälle zählen: mindestens 1s alt und nahezu still
   let highestY = H;
   for (const b of balls) {
     if (!b.body) continue;
@@ -780,8 +915,16 @@ function updateMusicTempo(balls) {
   // Ratio: 0 = kein ruhender Ball / alles unten, 1 = ruhender Ball an der Gefahrenlinie
   const playableH = H - GAME_OVER_LINE;
   const newRatio = Math.max(0, Math.min(1, (H - highestY) / playableH));
-  // Sanft lerpen damit kein abrupter Tempo-Sprung passiert
-  _currentStackRatio += (newRatio - _currentStackRatio) * 0.08;
+  // Gestufte Übergänge an den Y-Linien (keine fließende Interpolation → klar messbar)
+  // Linie 1 bei 33%, Linie 2 bei 60%, Linie 3 bei 82%
+  let targetRatio;
+  if (newRatio < 0.33)      targetRatio = 0;    // unter Linie 1: Basistempo
+  else if (newRatio < 0.60) targetRatio = 0.33; // zwischen Linie 1+2: leicht schneller
+  else if (newRatio < 0.82) targetRatio = 0.66; // zwischen Linie 2+3: deutlich schneller
+  else                      targetRatio = 1.0;   // über Linie 3: max Tempo
+
+  // Sanft lerpen damit kein abrupter Sprung passiert
+  _currentStackRatio += (targetRatio - _currentStackRatio) * 0.08;
 }
 
 function _getTempoMs(baseTempo) {
@@ -795,26 +938,24 @@ function _seqTick() {
   if (!_seqRunning || muted) return;
   const ctx   = getAudioCtx();
   const now   = ctx.currentTime;
-  const track = BIOME_TRACKS[_seqBiome];
+  const sections = MUSIC_TRACKS[_activeTrackKey].sections;
+  // Nach 2 vollen 16-Step-Loops Section wechseln (= 32 Steps)
+  _seqSection = Math.floor(_seqStep / 32) % sections.length;
+  const track = sections[_seqSection];
   const step  = _seqStep % 16;
   const t     = _getTempoMs(track.tempo);
   const out   = _getMasterGain();
 
-  // Melodie – Hauptstimme: weiche Sinuswelle statt harter Pulswelle für Hintergrund
-  if (track.mel[step]) {
-    _note(ctx, now, track.mel[step], 'sine',     t * 0.00085, 0.14, out);
-  }
-  // Melodie – Gegenstimme: triangle, noch weicher
-  if (track.mel2[step]) {
-    _note(ctx, now, track.mel2[step], 'triangle', t * 0.0012,  0.07, out);
-  }
-  // Bass
-  if (track.bass[step]) {
-    _note(ctx, now, track.bass[step], 'sine',     t * 0.0018,  0.16, out);
-  }
-  // Drums
-  if (track.drums[step] === 1) _kick(ctx, now, out);
-  if (track.drums[step] === 2) _hihat(ctx, now, out);   // weicher Hihat statt Snare
+  if (track.mel[step])  _note(ctx, now, track.mel[step],  'sine',     t * 0.00085, 0.13, out);
+  if (track.mel2[step]) _note(ctx, now, track.mel2[step], 'triangle', t * 0.0012,  0.07, out);
+  if (track.mel3 && track.mel3[step]) _note(ctx, now, track.mel3[step], 'sine', t * 0.0008, 0.06, out);
+  if (track.bass[step]) _note(ctx, now, track.bass[step], 'sine',     t * 0.0020,  0.17, out);
+
+  const d = track.drums[step];
+  if (d === 1) _kick(ctx, now, out);
+  if (d === 2) _hihat(ctx, now, out);
+  if (d === 3) _snare(ctx, now, out);
+  if (d === 4) { _kick(ctx, now, out); _hihat(ctx, now, out); }
 
   _seqStep++;
   _seqHandle = setTimeout(_seqTick, t);
@@ -881,21 +1022,65 @@ function _hihat(ctx, time, output) {
 }
 
 
-async function startBgMusic() {
-  if (muted) return;
-  if (_bgLoopSource || _seqRunning) return;
+// Snare – weißes Rauschen + Body-Ton
+function _snare(ctx, time, output) {
+  try {
+    // Rausch-Anteil
+    const buf  = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.12), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+    const src  = ctx.createBufferSource();
+    src.buffer = buf;
+    const hp   = ctx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 1800;
+    const gn   = ctx.createGain();
+    gn.gain.setValueAtTime(0.18, time);
+    gn.gain.exponentialRampToValueAtTime(0.001, time + 0.10);
+    src.connect(hp); hp.connect(gn); gn.connect(output);
+    src.start(time); src.stop(time + 0.13);
+    // Body-Ton
+    const osc  = ctx.createOscillator();
+    const og   = ctx.createGain();
+    osc.frequency.setValueAtTime(180, time);
+    osc.frequency.exponentialRampToValueAtTime(80, time + 0.06);
+    og.gain.setValueAtTime(0.14, time);
+    og.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    osc.connect(og); og.connect(output);
+    osc.start(time); osc.stop(time + 0.09);
+  } catch(_) {}
+}
 
-  // Versuche zuerst die Loop-Datei zu laden
-  const buf = await _loadAudioBuffer('bgMusic', SOUND_FILES.bgMusic);
-  if (buf && !muted) {
-    _bgLoopBuffer = buf;
-    _startLoopSource();
-    return;
-  }
-  // Fallback: Sequencer
+function startBgMusic() {
+  if (muted) return;
+  if (_seqRunning) return;
   _seqRunning = true;
   _seqStep    = 0;
+  _seqSection = 0;
   _seqTick();
+}
+
+function switchMusicTrack(key) {
+  if (key === _activeTrackKey) return;
+  _activeTrackKey = key;
+  // Kurzer Crossfade: kurz fade out, sofort neuen Track starten
+  const cfg = _getCrossfadeGain();
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  cfg.gain.cancelScheduledValues(now);
+  cfg.gain.setValueAtTime(cfg.gain.value, now);
+  cfg.gain.linearRampToValueAtTime(0, now + 0.4);
+  setTimeout(() => {
+    _seqStep    = 0;
+    _seqSection = 0;
+    _hihat._buf = null;
+    if (!muted && _seqRunning) {
+      const cfg2 = _getCrossfadeGain();
+      const ctx2 = getAudioCtx();
+      cfg2.gain.cancelScheduledValues(ctx2.currentTime);
+      cfg2.gain.setValueAtTime(0, ctx2.currentTime);
+      cfg2.gain.linearRampToValueAtTime(1.0, ctx2.currentTime + 0.5);
+    }
+  }, 420);
 }
 
 function _startLoopSource() {
@@ -917,8 +1102,7 @@ function resetBgMusicBiome() {
   _seqFadingTo = -1;
   _seqStep     = 0;
   _hihat._buf  = null;
-  _bgTargetBiomeIdx = 0;
-  _bgBodyColor = BGBODY_KEYS[0].c;
+  // Tagesablauf laeuft weiter – _bgBodyColor bleibt aktuell
   _currentStackRatio = 0;
   // Crossfade-Gain sofort auf 1 zurueck
   if (_crossfadeGain) {
@@ -1151,45 +1335,13 @@ const EMOJI_CATEGORIES = {
 
 let activeCategory = 'zoo';
 
-// Konvertiert einen hex-Farbwert in eine dunklere, gesaettigtere Randfarbe
-// Nutzt HSL um echten Kontrast zu garantieren egal wie hell die Ballfarbe ist
+// Randfarbe = Ballfarbe leicht abgedunkelt – gleicher Farbton, kein Farbstich
 function _borderColorFor(hexColor) {
-  const r = ((hexColor >> 16) & 0xff) / 255;
-  const g = ((hexColor >> 8)  & 0xff) / 255;
-  const b =  (hexColor        & 0xff) / 255;
-
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  let h = 0, s = 0;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-
-  // Dunkel (L: 25-35%) und staerker gesaettigt fuer klaren Rand
-  const newL = 0.28;
-  const newS = Math.min(1, s + 0.3);
-
-  function hsl2rgb(h, s, l) {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    const f = t => {
-      if (t < 0) t += 1; if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-      return p;
-    };
-    return [Math.round(f(h+1/3)*255), Math.round(f(h)*255), Math.round(f(h-1/3)*255)];
-  }
-
-  const [nr, ng, nb] = hsl2rgb(h, newS, newL);
-  return (nr << 16) | (ng << 8) | nb;
+  const f = 0.72;
+  const r = Math.round(((hexColor >> 16) & 0xff) * f);
+  const g = Math.round(((hexColor >> 8)  & 0xff) * f);
+  const b = Math.round(( hexColor        & 0xff) * f);
+  return (r << 16) | (g << 8) | b;
 }
 
 // Stellt sicher dass Farben nicht zu hell (fast weiß) werden
@@ -1224,61 +1376,77 @@ let ANIMALS = getAnimalsForCategory('zoo');
 // Ein vollstaendiger Tag = 600 Punkte → dann wiederholt sich der Zyklus
 // phase 0..1 beschreibt die Tageszeit kontinuierlich
 // ========================================
-const DAY_CYCLE_SCORE = 600; // Punkte pro vollstaendigem Tag
+const DAY_CYCLE_SCORE = 600; // Punkte pro vollstaendigem Tag (noch fuer Kompatibilitaet)
 
-// Himmelsfarben-Keyframes ueber den Tag (oben/unten des Verlaufs)
+// Zeitbasierter Tagesablauf: laeuft immer, unabhaengig von Balls oder Score
+// Ein vollstaendiger Tag dauert 4 Minuten (240 Sekunden)
+const DAY_CYCLE_SECONDS = 240;
+// Startet bei Mittag (phase = 0.50)
+let _dayCycleStart = Date.now() - 0.50 * DAY_CYCLE_SECONDS * 1000;
+
+function getDayPhase(score) {
+  // Zeitbasiert: ignoriert Score, laeuft immer weiter
+  const elapsed = (Date.now() - _dayCycleStart) / 1000;
+  return (elapsed % DAY_CYCLE_SECONDS) / DAY_CYCLE_SECONDS;
+}
 // phase: 0=Mitternacht, 0.25=Sonnenaufgang, 0.5=Mittag, 0.75=Sonnenuntergang, 1=Mitternacht
 const SKY_KEYS = [
-  { p: 0.00, top: '#0a0820', bot: '#1a1040' },  // Mitternacht
-  { p: 0.10, top: '#1a1040', bot: '#2a1858' },  // Tiefe Nacht
-  { p: 0.20, top: '#3a1828', bot: '#8a3848' },  // Morgenroete beginnt
-  { p: 0.28, top: '#c05030', bot: '#f09058' },  // Sonnenaufgang
-  { p: 0.35, top: '#f0c870', bot: '#f0a040' },  // Goldene Stunde morgens
-  { p: 0.45, top: '#5ab0e8', bot: '#a8d8f0' },  // Spaeter Morgen
-  { p: 0.55, top: '#2a88d8', bot: '#60b8f0' },  // Mittag
-  { p: 0.65, top: '#4898c8', bot: '#90c8e8' },  // Nachmittag
-  { p: 0.72, top: '#e08040', bot: '#f0b060' },  // Goldene Stunde abends
-  { p: 0.78, top: '#c03818', bot: '#802840' },  // Sonnenuntergang
-  { p: 0.85, top: '#401838', bot: '#200c28' },  // Daemmerung
-  { p: 0.92, top: '#180c28', bot: '#100820' },  // Fruehe Nacht
-  { p: 1.00, top: '#0a0820', bot: '#1a1040' },  // Mitternacht (wieder)
+  { p: 0.00, top: '#1a1a3a', bot: '#2a2050' },  // Mitternacht – weiches Indigo
+  { p: 0.10, top: '#20183a', bot: '#302860' },  // Tiefe Nacht
+  { p: 0.20, top: '#4a2a40', bot: '#8a4858' },  // Morgenröte – sanftes Violett-Rosa
+  { p: 0.28, top: '#d48060', bot: '#f0b888' },  // Sonnenaufgang – Pfirsich
+  { p: 0.35, top: '#f0d090', bot: '#f8e8b0' },  // Goldene Stunde – cremiges Gold
+  { p: 0.45, top: '#88c8f0', bot: '#c8e8ff' },  // Später Morgen – Babyblau
+  { p: 0.50, top: '#70b8f0', bot: '#b0dcff' },  // Vor Mittag
+  { p: 0.55, top: '#58a8e8', bot: '#a0d0ff' },  // Mittag – weiches Himmelblau
+  { p: 0.65, top: '#70a8d8', bot: '#b0ccee' },  // Nachmittag – gedämpftes Blau
+  { p: 0.72, top: '#e8a870', bot: '#f8c898' },  // Goldene Stunde – warmes Apricot
+  { p: 0.78, top: '#c06858', bot: '#a04068' },  // Sonnenuntergang – Altrosa
+  { p: 0.85, top: '#584068', bot: '#302048' },  // Dämmerung – Lavendel
+  { p: 0.92, top: '#281838', bot: '#181028' },  // Frühe Nacht
+  { p: 1.00, top: '#1a1a3a', bot: '#2a2050' },  // Mitternacht (wieder)
 ];
 
-// Huegelfarben-Keyframes
+// Hügelfarben – weiche gedeckte Grüntöne
 const HILL_KEYS = [
-  { p: 0.00, c: '#0e1a08' },  // Nacht - fast schwarz-gruen
-  { p: 0.20, c: '#1a1408' },  // Morgenrot - bräunlich
-  { p: 0.28, c: '#3a2808' },  // Sonnenaufgang
-  { p: 0.40, c: '#286020' },  // Morgen - frisches Gruen
-  { p: 0.55, c: '#30782a' },  // Mittag - sattes Gruen
-  { p: 0.72, c: '#506020' },  // Nachmittag - goldiges Gruen
-  { p: 0.78, c: '#482010' },  // Sonnenuntergang
-  { p: 0.90, c: '#180c08' },  // Daemmerung
-  { p: 1.00, c: '#0e1a08' },
+  { p: 0.00, c: '#1a2218' },  // Nacht – dunkelgrün
+  { p: 0.20, c: '#2a2018' },  // Morgenröte – warmes Braun
+  { p: 0.28, c: '#5a4020' },  // Sonnenaufgang – goldbraun
+  { p: 0.38, c: '#5a9840' },  // Morgen – frisches Salbei-Grün
+  { p: 0.55, c: '#60a848' },  // Mittag – sattes weiches Grün
+  { p: 0.65, c: '#70a840' },  // Nachmittag – olivgrün
+  { p: 0.72, c: '#907840' },  // Goldene Stunde – warmes Khaki
+  { p: 0.78, c: '#784030' },  // Sonnenuntergang – Terrakotta
+  { p: 0.90, c: '#281810' },  // Dämmerung
+  { p: 1.00, c: '#1a2218' },
 ];
 
+// Pflanzenschicht (Vordergrund) – heller und satter als Hintergrund
 const PLANT_KEYS = [
-  { p: 0.00, c: '#141e0a' },
-  { p: 0.20, c: '#281808' },
-  { p: 0.28, c: '#503010' },
-  { p: 0.40, c: '#388030' },
-  { p: 0.55, c: '#40a038' },
-  { p: 0.72, c: '#688030' },
-  { p: 0.78, c: '#602818' },
-  { p: 0.90, c: '#200e0a' },
-  { p: 1.00, c: '#141e0a' },
+  { p: 0.00, c: '#202a18' },
+  { p: 0.20, c: '#302818' },
+  { p: 0.28, c: '#685030' },
+  { p: 0.38, c: '#68b850' },  // Morgen – lebendiges Hellgrün
+  { p: 0.55, c: '#70c858' },  // Mittag – kräftiges Mintgrün
+  { p: 0.65, c: '#78c050' },
+  { p: 0.72, c: '#a09848' },  // Goldene Stunde – Olive-Gold
+  { p: 0.78, c: '#885040' },
+  { p: 0.90, c: '#302010' },
+  { p: 1.00, c: '#202a18' },
 ];
 
+// Body-Hintergrund (hinter dem Canvas) – immer etwas dunkler als der Himmel
 const BGBODY_KEYS = [
-  { p: 0.00, c: '#050408' },
-  { p: 0.20, c: '#120808' },
-  { p: 0.28, c: '#281408' },
-  { p: 0.40, c: '#0e2810' },
-  { p: 0.55, c: '#103020' },
-  { p: 0.72, c: '#182808' },
-  { p: 0.78, c: '#200808' },
-  { p: 0.90, c: '#080410' },
-  { p: 1.00, c: '#050408' },
+  { p: 0.00, c: '#0e0e20' },  // Nacht
+  { p: 0.20, c: '#180e10' },
+  { p: 0.28, c: '#381808' },  // Sonnenaufgang – warm
+  { p: 0.38, c: '#204818' },  // Morgen – tiefes Grün
+  { p: 0.55, c: '#186030' },  // Mittag
+  { p: 0.65, c: '#205828' },
+  { p: 0.72, c: '#283010' },  // Goldene Stunde
+  { p: 0.78, c: '#281010' },
+  { p: 0.90, c: '#100818' },
+  { p: 1.00, c: '#0e0e20' },
 ];
 
 // Interpoliert zwischen Keyframes basierend auf phase (0..1)
@@ -1295,23 +1463,7 @@ function _sampleKeys(keys, phase) {
   return keys[0].c || [keys[0].top, keys[0].bot];
 }
 
-function getDayPhase(score) {
-  return (score % DAY_CYCLE_SCORE) / DAY_CYCLE_SCORE;
-}
-
-// Gibt Biome-Index fuer Musik zurueck (basierend auf Tageszeit)
-function getBiomeIndex(score) {
-  const p = getDayPhase(score);
-  // Nacht=6(Kosmos), Morgenroete=3(Vulkan-rot), Morgen=0(Savanne),
-  // Mittag=2(Ozean-hell), Nachmittag=1(Wueste), Sonnenuntergang=3, Daemmerung=5
-  if (p < 0.22) return 6;       // Nacht → Kosmos
-  if (p < 0.32) return 3;       // Morgenroete → dramatisch
-  if (p < 0.50) return 0;       // Morgen → Savanne
-  if (p < 0.65) return 2;       // Mittag → Ozean
-  if (p < 0.75) return 1;       // Nachmittag → Wueste
-  if (p < 0.88) return 5;       // Sonnenuntergang → Kirschbluete
-  return 6;                     // Nacht → Kosmos
-}
+// Gibt Biome-Index fuer Musik zurueck (nicht mehr aktiv genutzt)
 
 // Dummy BIOMES fuer Kompatibilitaet mit bodyBackground-Lerp
 const BIOMES = [{ bgColor: '#1a4a2e' }]; // wird dynamisch ueberschrieben
@@ -1393,8 +1545,7 @@ let _currentScore = 0;
 function updateScore(score) {
   _currentScore = score;
   document.getElementById('score-val').textContent = score;
-  const biomeIdx = getBiomeIndex(score);
-  updateMusicBiome(biomeIdx);
+  // Kein Biom-Musikwechsel mehr – Tempo wird allein durch Stapelhöhe gesteuert
 }
 
 // Body-Hintergrundfarbe wird direkt aus dem Tageszyklus berechnet
@@ -1575,6 +1726,34 @@ document.getElementById('slider-sfx').addEventListener('input', function() {
   sfxVolume = this.value / 100;
   document.getElementById('label-sfx').textContent = this.value + '%';
 });
+
+// Musik-Titel-Auswahl
+function buildMusicTrackGrid() {
+  const grid = document.getElementById('music-track-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  Object.entries(MUSIC_TRACKS).forEach(([key, track]) => {
+    const btn = document.createElement('div');
+    btn.style.cssText = `
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      padding:8px 4px; border-radius:10px; cursor:pointer; touch-action:manipulation;
+      border:1.5px solid ${key === _activeTrackKey ? 'rgba(255,220,80,0.8)' : 'rgba(255,255,255,0.12)'};
+      background:${key === _activeTrackKey ? 'rgba(255,220,80,0.14)' : 'rgba(255,255,255,0.06)'};
+      transition:all 0.15s; min-height:54px;
+    `;
+    btn.innerHTML = `
+      <span style="font-size:20px;line-height:1">${track.icon}</span>
+      <span style="font-size:8px;opacity:${key === _activeTrackKey ? '1' : '0.65'};color:${key === _activeTrackKey ? '#ffd700' : '#fff'};text-align:center;line-height:1.2">${track.label}</span>
+    `;
+    btn.addEventListener('click', () => {
+      vibrate(8);
+      switchMusicTrack(key);
+      buildMusicTrackGrid(); // UI aktualisieren
+    });
+    grid.appendChild(btn);
+  });
+}
+buildMusicTrackGrid();
 
 // ========================================
 // PHASER SCENE KLASSEN
@@ -1793,16 +1972,49 @@ class Background {
   }
 
   _drawMoon(ctx, x, y, r) {
-    // Mondscheibe mit Halo
-    const halo = ctx.createRadialGradient(x, y, r, x, y, r * 2.8);
-    halo.addColorStop(0, 'rgba(200,195,160,0.20)'); halo.addColorStop(1, 'rgba(200,195,160,0)');
-    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, r * 2.8, 0, Math.PI * 2); ctx.fill();
-    // Mondscheibe
-    ctx.fillStyle = '#e0d8b8';
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    // Sichel-Abdeckung
-    ctx.fillStyle = this.sky0;
-    ctx.beginPath(); ctx.arc(x + r * 0.36, y - r * 0.10, r * 0.78, 0, Math.PI * 2); ctx.fill();
+    // Großer atmosphärischer Glow
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 4.5);
+    glow.addColorStop(0,   'rgba(180,200,255,0.22)');
+    glow.addColorStop(0.4, 'rgba(160,180,255,0.10)');
+    glow.addColorStop(1,   'rgba(140,160,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(x, y, r * 4.5, 0, Math.PI * 2); ctx.fill();
+
+    // Sichel via Pfad-Geometrie (nicht Übermalen)
+    // Äußerer Kreis – beleuchtete Seite
+    // Innerer Kreis (Schatten) verschoben → ergibt saubere Sichel
+    const offset = r * 0.55; // wie dick die Sichel ist
+    ctx.save();
+    ctx.beginPath();
+    // Vollkreis im Uhrzeigersinn
+    ctx.arc(x, y, r, 0, Math.PI * 2, false);
+    // Überlappender Schattenkreis gegen Uhrzeigersinn → schneidet aus
+    ctx.arc(x + offset, y - r * 0.05, r * 0.92, 0, Math.PI * 2, true);
+    // Mondfarbe mit Gradient – weich und leuchtend
+    const moonGrad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.4, 0, x, y, r);
+    moonGrad.addColorStop(0,   '#fffff0');
+    moonGrad.addColorStop(0.5, '#f0e8c0');
+    moonGrad.addColorStop(1,   '#c8b870');
+    ctx.fillStyle = moonGrad;
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    // Subtile Kontur-Linie der Sichel
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2, false);
+    ctx.arc(x + offset, y - r * 0.05, r * 0.92, 0, Math.PI * 2, true);
+    ctx.strokeStyle = 'rgba(255,240,160,0.25)';
+    ctx.lineWidth = 0.8 * SCALE_FACTOR;
+    ctx.stroke();
+    ctx.restore();
+
+    // Kleiner innerer Lichtpunkt (Limb brightening)
+    const tip = ctx.createRadialGradient(x - r * 0.55, y - r * 0.55, 0, x - r * 0.4, y - r * 0.4, r * 0.6);
+    tip.addColorStop(0,   'rgba(255,255,220,0.35)');
+    tip.addColorStop(1,   'rgba(255,255,220,0)');
+    ctx.fillStyle = tip;
+    ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.5, 0, Math.PI * 2); ctx.fill();
   }
 
   _drawClouds(ctx, t, color) {
@@ -2254,6 +2466,8 @@ class GameScene extends Phaser.Scene {
     this.nextType      = randNext();
     drawPreview(this.nextType);
     updateScore(0);
+    // Tagesablauf auf Mittag zuruecksetzen
+    _dayCycleStart = Date.now() - 0.50 * DAY_CYCLE_SECONDS * 1000;
     updateDynamicBackground(0);
     startBgMusic();
   }
