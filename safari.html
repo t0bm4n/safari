@@ -29,7 +29,7 @@
   }
 
   body {
-    background: #082b18;
+    background: #0b1035;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     display: flex;
     flex-direction: column;
@@ -38,37 +38,17 @@
     position: relative;
   }
 
-  #biome-bg-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 0;
-    pointer-events: none;
-    display: block;
-  }
 
   #game-wrapper {
     width: 100vw;
     height: 100vh;
+    max-width: 480px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: min(2vw, 10px);
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Fullscreen-Biome-Canvas hinter allem */
-  #biome-bg-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0;
-    pointer-events: none;
   }
 
   #hud {
@@ -77,13 +57,12 @@
     align-items: center;
     width: min(100vw - 20px, 420px);
     padding: min(2vw, 8px) min(3.3vw, 14px);
-    background: rgba(0,0,0,0.22);
+    background: rgba(255,255,255,0.07);
     border-radius: min(3.3vw, 14px);
-    border: 1px solid rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.1);
     color: #fff;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   #next-box {
@@ -122,11 +101,10 @@
   }
 
   #score-val { 
-    color: #ffd86a; 
+    color: #ffd700; 
     font-size: min(4.8vw, 20px); 
     font-weight: 700; 
-    line-height: 1;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    line-height: 1; 
   }
 
   #gear-btn {
@@ -135,8 +113,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255,255,255,0.35);
-    border: 1px solid rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.14);
     border-radius: 50%;
     cursor: pointer;
     font-size: min(4vw, 17px);
@@ -163,10 +141,9 @@
     height: 100% !important;
     border-radius: min(3.8vw, 16px);
     display: block;
-    /* Klare Abtrennung: Glasscheibe mit Schatten */
-    box-shadow: 0 8px 48px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.18);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
     touch-action: none;
-    border: none;
+    border: 2px solid rgba(255,255,255,0.15);
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     -webkit-font-smoothing: antialiased;
@@ -302,8 +279,8 @@
 
   #merge-bar {
     width: min(100vw - 20px, 420px);
-    background: rgba(255,255,255,0.25);
-    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: min(3.3vw, 14px);
     padding: min(1.9vw, 8px) min(2.4vw, 10px);
     display: flex;
@@ -353,7 +330,7 @@
   #loading-screen {
     position: fixed;
     inset: 0;
-    background: linear-gradient(135deg, #082b18 0%, #0d5c2e 100%);
+    background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -401,14 +378,16 @@
 </head>
 <body>
 
-<canvas id="biome-bg-canvas"></canvas>
+
+<canvas id="start-bg-canvas" style="
+  position:fixed; inset:0; width:100%; height:100%;
+  z-index:999; pointer-events:none;
+"></canvas>
 
 <div id="start-screen" style="
   position:fixed;
   inset:0;
-  background:rgba(8,43,24,0.90);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: transparent;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -418,9 +397,11 @@
   font-family:system-ui;
   text-align:center;
   gap: 18px;
-  padding: 24px;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 ">
-  <div style="font-size:52px; line-height:1;">🐘</div>
+  <div id="start-icon" style="font-size:52px; line-height:1; transition: all 0.2s ease;">🐘</div>
   <div style="font-size:22px; font-weight:700; letter-spacing:0.5px;">Tier-Merge Safari</div>
 
   <div style="width:100%; max-width:340px;">
@@ -444,12 +425,12 @@
   <div id="version-display" style="font-size:11px; opacity:0.35;"></div>
 </div>
 
-<div id="loading-screen">
+<div id="loading-screen" style="display:none;">
   <div class="loading-emoji">🐘</div>
   <div class="loading-text">Lade Safari...</div>
 </div>
 
-<div id="game-wrapper">
+<div id="game-wrapper" style="display:none;">
   <div id="hud">
     <div id="next-box">
       <canvas id="preview-canvas" width="48" height="48"></canvas>
@@ -504,23 +485,7 @@
 // ========================================
 // VERSIONSNUMMER
 // ========================================
-const VERSION = "0.3.0";
-
-// ========================================
-// SOUND-KONFIGURATION
-// ========================================
-const SOUND_FOLDER = "./sounds/";
-
-const SOUND_FILES = {
-  bgMusic:     SOUND_FOLDER + "loop_1.mp3",
-  drop:        SOUND_FOLDER + "drop.mp3",
-  merge:       SOUND_FOLDER + "merge.mp3",
-  fanfare:     SOUND_FOLDER + "fanfare.mp3",
-  elephantWin: SOUND_FOLDER + "elephant.mp3",
-};
-
-// Auf true setzen, um die eingebauten Synth-Sounds zu nutzen (ohne Dateien)
-const USE_DEFAULT_SOUNDS = false;
+const VERSION = "0.3.2";
 
 // ========================================
 // TIER-DROP-LIMIT
@@ -535,32 +500,10 @@ let musicVolume = 0.85;   // 0..1
 let sfxVolume   = 0.85;   // 0..1
 let audioCtx = null;
 
-// Loop-Playback State
-let _bgLoopSource  = null;
-let _bgLoopBuffer  = null;
-
-// Audio-Buffer-Cache
-const _audioBuffers = {};
-
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
-}
-
-async function _loadAudioBuffer(key, url) {
-  if (_audioBuffers[key]) return _audioBuffers[key];
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('not found');
-    const arr  = await resp.arrayBuffer();
-    const ctx  = getAudioCtx();
-    _audioBuffers[key] = await ctx.decodeAudioData(arr);
-    return _audioBuffers[key];
-  } catch (e) {
-    console.warn(`Sound-Datei "${url}" nicht gefunden, nutze Synth-Fallback.`);
-    return null;
-  }
 }
 
 function _playBuffer(buffer, vol = 0.8) {
@@ -660,104 +603,45 @@ let _masterGain  = null;    // Master-Gain für Fade
 // Phrygisch:        E F G A B C D
 // Lydisch:          C D E F# G A B
 
-const BIOME_TRACKS = [
-  // 0: Savanne – C-Dur Pentatonik, gelassen
-  {
-    tempo: 480,
-    mel:  [262,null,330,null,392,330,null,392, 440,null,392,330,262,null,330,null],
-    mel2: [null,196,null,null,null,247,null,null,null,196,null,null,null,196,null,null],
-    bass: [98, null,null,null,131,null,null,null, 98,null,null,null,110,null,null,null],
-    drums:[1,0,0,0, 2,0,0,0, 1,0,1,0, 2,0,0,0],
-  },
-  // 1: Wüste – Phrygisch, hypnotisch-treibend
-  {
-    tempo: 340,
-    mel:  [330,311,330,null,370,330,311,null, 330,null,370,392,370,330,null,311],
-    mel2: [null,null,220,null,null,null,208,null,null,null,220,null,null,null,208,null],
-    bass: [110,null,null,110,null,null,110,null, 104,null,null,104,null,null,104,null],
-    drums:[1,0,1,0, 2,0,1,0, 1,0,1,0, 2,1,0,0],
-  },
-  // 2: Ozean – Lydisch, schwebend-weiträumig
-  {
-    tempo: 600,
-    mel:  [262,null,null,330,null,null,370,null, 392,null,null,370,null,null,330,null],
-    mel2: [null,null,196,null,null,196,null,null,null,null,247,null,null,247,null,null],
-    bass: [131,null,null,null,null,null,null,null, 123,null,null,null,null,null,null,null],
-    drums:[1,0,0,0, 0,0,2,0, 0,0,0,0, 0,0,2,0],
-  },
-  // 3: Vulkan – Phrygisch schnell, dramatisch
-  {
-    tempo: 260,
-    mel:  [392,415,392,370, 392,null,370,349, 370,392,415,392, 370,null,349,null],
-    mel2: [null,null,247,null,null,null,233,null,null,null,247,null,null,null,220,null],
-    bass: [130,null,130,null,138,null,130,null,130,null,116,null,116,null,130,null],
-    drums:[1,0,1,2, 1,1,0,2, 1,0,1,0, 2,1,1,0],
-  },
-  // 4: Eis – Moll, langsam, klar
-  {
-    tempo: 680,
-    mel:  [220,null,null,262,null,null,196,null, 220,null,262,null,233,null,null,196],
-    mel2: [null,null,165,null,null,165,null,null,null,null,175,null,null,null,175,null],
-    bass: [110,null,null,null,98, null,null,null, 110,null,null,null,104,null,null,null],
-    drums:[1,0,0,0, 2,0,0,0, 0,0,0,0, 2,0,0,0],
-  },
-  // 5: Kirschblüte – Dorisch, verspielt-romantisch
-  {
-    tempo: 400,
-    mel:  [349,null,392,null,440,392,349,null, 370,null,415,440,415,370,null,349],
-    mel2: [null,262,null,262,null,null,262,null,null,247,null,null,null,247,null,null],
-    bass: [117,null,null,null,131,null,null,null,117,null,null,null,110,null,null,null],
-    drums:[1,0,0,2, 0,0,1,0, 1,0,0,2, 0,1,0,0],
-  },
-  // 6: Kosmos – Quinten, sehr langsam, meditativ
-  {
-    tempo: 820,
-    mel:  [196,null,null,null,294,null,null,null, 220,null,null,null,330,null,null,null],
-    mel2: [null,null,null,147,null,null,null,220,null,null,null,165,null,null,null,247],
-    bass: [65, null,null,null,null,null,null,null, 73,null,null,null,null,null,null,null],
-    drums:[1,0,0,0, 0,0,0,0, 0,0,2,0, 0,0,0,0],
-  },
-];
-
 // ── Drei wählbare Musiktitel ────────────────────────────────────────────────
 // Jeder Track hat 4 Sections (A B C D) die rotieren → mehr Abwechslung
 // Noten in Hz. null = Pause. drums: 1=Kick, 2=Hihat, 3=Snare, 4=beide
 const MUSIC_TRACKS = {
   town_chill: {
-    label: 'Chill',
-    icon:  '🌍',
-    // Klassischer Mario-Overworld Groove – C-Dur, bouncy & verspielt
+    label: 'Town Chill',
+    icon:  '🏘️',
+    // Laid-back Jazz-Lofi Feeling – C-Dur / A-Moll, synkopiert, warm
     sections: [
-      { // A: Main Groove
-        tempo: 500,
-        mel:  [523,null,659,null,784,null,659,523, 587,null,698,null,784,null,659,null],
-        mel2: [null,392,null,440,null,392,null,null, null,440,null,392,null,null,349,null],
-        mel3: [null,null,262,null,null,294,null,null, null,null,262,null,null,294,null,null],
-        bass: [131,null,165,null,196,null,165,null, 147,null,175,null,196,null,165,null],
-        drums:[1,0,2,0, 1,0,2,0, 1,0,2,0, 1,0,2,0],
-      },
-      { // B: Variation mit Sprüngen
-        tempo: 500,
-        mel:  [659,784,880,null,784,659,null,523, 587,698,784,null,698,587,null,523],
-        mel2: [null,null,440,null,null,392,null,null, null,null,440,null,null,392,null,null],
-        mel3: [262,null,null,null,294,null,null,null, 262,null,null,null,294,null,null,null],
-        bass: [131,null,196,null,165,null,131,null, 147,null,196,null,175,null,131,null],
-        drums:[1,0,2,0, 1,2,0,2, 1,0,2,0, 1,2,0,2],
-      },
-      { // C: Arpeggio-Part (typisch Mario)
-        tempo: 480,
-        mel:  [523,659,784,659,523,659,784,659, 587,698,880,698,587,698,880,698],
-        mel2: [null,null,null,null,392,null,null,null, null,null,null,null,440,null,null,null],
-        mel3: [262,null,262,null,262,null,262,null, 294,null,294,null,294,null,294,null],
-        bass: [131,null,131,null,165,null,165,null, 147,null,147,null,175,null,175,null],
-        drums:[1,0,2,0, 1,0,2,0, 1,0,2,0, 1,0,2,0],
-      },
-      { // D: Breakdown (ruhiger, verspielt)
-        tempo: 520,
-        mel:  [523,null,null,587,null,null,659,null, null,587,null,null,523,null,null,null],
-        mel2: [null,null,392,null,null,349,null,null, 392,null,null,349,null,null,330,null],
+      { // A: Ruhige Intro-Melodie
+        tempo: 560,
+        mel:  [392,null,440,null,392,330,null,294, 330,null,294,262,null,294,null,330],
+        mel2: [null,247,null,247,null,null,196,null, null,196,null,null,175,null,196,null],
         mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [131,null,null,null,165,null,null,null, 131,null,null,null,147,null,null,null],
+        bass: [131,null,null,165,null,131,null,null,  110,null,null,131,null,110,null,null],
+        drums:[1,0,0,2, 0,1,0,2, 1,0,0,2, 0,1,0,2],
+      },
+      { // B: Gegenmelodie
+        tempo: 560,
+        mel:  [330,null,294,330,null,392,null,440, 392,null,330,null,294,null,330,null],
+        mel2: [null,196,null,null,247,null,247,null, null,247,null,196,null,196,null,247],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [98, null,null,110,null,null,131,null,  110,null,null,98,null,null,110,null],
+        drums:[1,0,0,2, 1,0,1,2, 0,0,1,2, 1,0,0,2],
+      },
+      { // C: Höhepunkt – Akkordmelodie
+        tempo: 540,
+        mel:  [523,null,494,null,440,null,392,null, 440,494,523,null,587,null,523,null],
+        mel2: [null,330,null,311,null,262,null,247, null,null,null,330,null,370,null,330],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [131,null,165,null,131,null,110,null,  131,null,131,null,165,null,131,null],
+        drums:[1,0,1,2, 0,0,1,2, 1,0,1,2, 0,1,0,2],
+      },
+      { // D: Ruhiger Ausklang, spärlich
+        tempo: 600,
+        mel:  [262,null,null,294,null,null,330,null, null,294,null,null,262,null,null,null],
+        mel2: [null,null,196,null,null,175,null,null, 196,null,null,175,null,null,165,null],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [98, null,null,null,131,null,null,null,  98,null,null,null,110,null,null,null],
         drums:[1,0,0,0, 2,0,0,0, 1,0,0,2, 0,0,0,0],
       },
     ],
@@ -765,80 +649,87 @@ const MUSIC_TRACKS = {
 
   power: {
     label: 'Power',
-    icon:  '🕳️',
-    // Düstere, funky Cave-Vibes (wie Underground Theme)
+    icon:  '⚡',
+    // SNES-Bosskampf – E-Moll, eingängiges Riff, klare Struktur, echter Drive
+    // Inspiration: Mega Man, Castlevania, Contra
     sections: [
-      { // A: Groovy Bass + kurze Melodie
-        tempo: 420,
-        mel:  [330,null,349,null,330,null,294,null, 262,null,294,null,330,null,null,null],
-        mel2: [null,null,196,null,null,null,175,null, null,null,196,null,null,null,null,null],
+      { // A: Das Haupt-Riff – unvergesslich, klar, treibend (E-Moll Pentatonik)
+        tempo: 250,
+        //          E    -    E    G    -    A    G    E     B    -    A    -    G    E    -    D
+        mel:  [330,null,330,392,null,440,392,330, 494,null,440,null,392,330,null,294],
+        mel2: [null,220,null,null,247,null,null,null, null,311,null,277,null,null,220,null],
         mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [82,null,82,null,98,null,82,null, 73,null,73,null,82,null,82,null],
-        drums:[1,0,0,2, 0,1,0,2, 1,0,0,2, 0,1,0,2],
+        //     E    -    E    -    E    -    B    -     A    -    A    -    B    -    E    -
+        bass: [165,null,165,null,165,null,247,null, 220,null,220,null,247,null,165,null],
+        //     K    -    H    S    K    -    H    S     K    H    H    S    K    -    H    S
+        drums:[1,0,2,3, 1,0,2,3, 1,2,2,3, 1,0,2,3],
       },
-      { // B: Mehr Bewegung
-        tempo: 420,
-        mel:  [330,349,392,null,349,330,null,294, 262,294,330,null,294,262,null,247],
-        mel2: [null,null,null,196,null,null,null,null, null,null,null,196,null,null,null,null],
-        mel3: [165,null,null,null,175,null,null,null, 165,null,null,null,175,null,null,null],
-        bass: [82,null,98,null,82,null,73,null, 82,null,98,null,82,null,73,null],
-        drums:[1,0,2,0, 1,0,2,0, 1,0,2,0, 1,0,2,0],
+      { // B: Melodie-Bridge – höher, intensiver, steigt zur Klimax
+        tempo: 250,
+        //          B    C    D    E    -    F#   E    D     E    -    D    -    C    B    -    A
+        mel:  [494,523,587,659,null,740,659,587, 659,null,587,null,523,494,null,440],
+        mel2: [null,null,null,null,415,null,null,370, null,415,null,370,null,null,330,null],
+        mel3: [247,null,294,null,330,null,294,null, 330,null,294,null,247,null,220,null],
+        bass: [165,null,165,null,247,null,247,null, 220,null,220,null,196,null,165,null],
+        drums:[1,0,2,3, 1,1,2,3, 1,0,2,3, 1,2,0,3],
       },
-      { // C: Minimal Groove
-        tempo: 440,
-        mel:  [330,null,null,null,294,null,null,null, 262,null,null,null,247,null,null,null],
-        mel2: [null,196,null,null,null,175,null,null, null,165,null,null,null,175,null,null],
+      { // C: Breakdown – halbe Geschwindigkeit, Spannung aufbauen
+        tempo: 280,
+        //         E    -    -    -    D    -    -    -    C    -    -    D    E    -    -    -
+        mel:  [330,null,null,null,294,null,null,null, 262,null,null,294,330,null,null,null],
+        mel2: [null,null,220,null,null,196,null,null, null,175,null,null,null,220,null,null],
         mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [82,null,null,null,73,null,null,null, 65,null,null,null,73,null,null,null],
+        bass: [165,null,null,null,147,null,null,null, 131,null,null,null,165,null,null,null],
         drums:[1,0,0,0, 2,0,0,2, 1,0,2,0, 3,0,0,3],
       },
-      { // D: Funky Ending
-        tempo: 400,
-        mel:  [330,392,349,null,330,294,null,262, 330,392,349,null,330,294,262,null],
-        mel2: [null,null,196,null,null,null,175,null, null,null,196,null,null,null,175,null],
-        mel3: [165,null,null,null,165,null,null,null, 165,null,null,null,165,null,null,null],
-        bass: [82,null,98,null,82,null,73,null, 82,null,98,null,82,null,65,null],
-        drums:[1,0,2,3, 1,0,2,3, 1,0,2,3, 4,2,3,4],
+      { // D: Finale – Riff + schnelles Arpeggio, alles eskaliert
+        tempo: 230,
+        //         E    G    A    B    C    B    A    G     E    G    A    B    E    D    C    B
+        mel:  [330,392,440,494,523,494,440,392, 330,392,440,494,659,587,523,494],
+        mel2: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,330],
+        mel3: [165,null,220,null,247,null,220,null, 165,null,220,null,330,null,247,null],
+        bass: [165,null,null,null,131,null,null,null, 165,null,null,null,247,null,196,null],
+        drums:[1,0,2,3, 1,2,0,3, 1,0,2,3, 4,2,3,4],
       },
     ],
   },
 
   fun: {
     label: 'Fun',
-    icon:  '⭐',
-    // Schneller Bonus-Level Style – hektisch, hoch, verspielt
+    icon:  '🎉',
+    // Bubbly Pop-Chiptune – G-Dur, synkopiert, viel Bewegung, Überraschungen
     sections: [
-      { // A: High-energy Hook
-        tempo: 300,
-        mel:  [784,880,988,null,880,784,null,659, 784,880,988,null,1047,null,988,null],
-        mel2: [null,null,null,523,null,null,null,null, null,null,null,523,null,null,null,null],
-        mel3: [392,null,392,null,392,null,392,null, 440,null,440,null,440,null,440,null],
-        bass: [196,null,196,null,220,null,220,null, 196,null,196,null,247,null,247,null],
-        drums:[1,0,1,2, 1,0,1,2, 1,0,1,2, 1,0,1,2],
-      },
-      { // B: Sprunghaft
-        tempo: 300,
-        mel:  [988,null,880,null,784,null,659,null, 784,880,988,null,880,784,null,659],
-        mel2: [null,523,null,null,null,494,null,null, null,null,null,523,null,null,null,null],
-        mel3: [392,null,null,null,440,null,null,null, 392,null,null,null,440,null,null,null],
-        bass: [196,null,220,null,196,null,165,null, 196,null,220,null,196,null,165,null],
-        drums:[1,0,2,0, 1,0,2,0, 1,0,2,0, 1,0,2,0],
-      },
-      { // C: Arpeggio Chaos
-        tempo: 280,
-        mel:  [784,988,1319,988,784,988,1319,988, 880,1047,1397,1047,880,1047,1397,1047],
-        mel2: [null,null,null,null,523,null,null,null, null,null,null,null,587,null,null,null],
-        mel3: [392,null,392,null,392,null,392,null, 440,null,440,null,440,null,440,null],
-        bass: [196,null,196,null,220,null,220,null, 247,null,247,null,262,null,262,null],
-        drums:[1,0,1,2, 1,0,1,2, 1,0,1,2, 1,0,1,2],
-      },
-      { // D: Outro
-        tempo: 320,
-        mel:  [784,null,null,880,null,null,988,null, null,880,null,null,784,null,null,null],
-        mel2: [null,null,523,null,null,494,null,null, 523,null,null,494,null,null,440,null],
+      { // A: Haupthook – eingängige Melodie
+        tempo: 340,
+        mel:  [392,null,440,494,null,523,null,494, 440,null,392,null,440,494,523,null],
+        mel2: [null,294,null,null,330,null,330,null, null,262,null,294,null,null,null,349],
         mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [196,null,null,null,220,null,null,null, 196,null,null,null,165,null,null,null],
-        drums:[1,0,0,0, 2,0,0,0, 1,0,0,2, 0,0,0,0],
+        bass: [196,null,null,196,null,220,null,196,  196,null,175,null,196,null,220,null],
+        drums:[1,0,1,0, 2,0,1,2, 1,0,1,0, 2,1,0,2],
+      },
+      { // B: Call & Response – fröhlicher Dialog
+        tempo: 340,
+        mel:  [587,null,523,null,494,null,440,null, 523,587,659,null,587,523,null,494],
+        mel2: [null,370,null,330,null,311,null,294, null,null,null,415,null,null,330,null],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [196,null,220,null,196,null,175,null,  196,null,220,null,247,null,196,null],
+        drums:[1,0,0,2, 1,0,1,2, 1,1,0,2, 1,0,1,2],
+      },
+      { // C: Türkischer Anflug – orientalische Skala
+        tempo: 360,
+        mel:  [440,415,392,null,349,370,392,null, 415,440,null,466,440,415,392,null],
+        mel2: [null,null,null,262,null,null,null,247, null,null,277,null,null,null,null,233],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [110,null,null,110,null,null,110,null,  104,null,null,110,null,null,98,null],
+        drums:[1,0,1,2, 1,0,0,2, 1,0,1,2, 0,1,0,2],
+      },
+      { // D: Finale – alles raus, Konfetti-Feeling
+        tempo: 320,
+        mel:  [523,587,659,null,698,null,659,587, 523,587,659,698,784,null,698,659],
+        mel2: [null,null,null,415,null,440,null,null, null,null,null,null,null,523,null,415],
+        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
+        bass: [131,null,165,null,131,null,196,null,  131,null,165,null,196,null,165,null],
+        drums:[1,0,1,2, 1,1,0,2, 1,0,1,2, 4,0,1,2],
       },
     ],
   },
@@ -1081,19 +972,6 @@ function switchMusicTrack(key) {
   }, 420);
 }
 
-function _startLoopSource() {
-  if (!_bgLoopBuffer || muted) return;
-  try {
-    const ctx  = getAudioCtx();
-    const src  = ctx.createBufferSource();
-    src.buffer = _bgLoopBuffer;
-    src.loop   = true;
-    src.connect(_getMasterGain());
-    src.start(0);
-    _bgLoopSource = src;
-  } catch (_) {}
-}
-
 function resetBgMusicBiome() {
   // Biome sofort auf 0 zuruecksetzen (kein Crossfade beim Neustart)
   _seqBiome    = 0;
@@ -1113,10 +991,6 @@ function resetBgMusicBiome() {
 }
 
 function stopBgMusic() {
-  if (_bgLoopSource) {
-    try { _bgLoopSource.stop(); } catch (_) {}
-    _bgLoopSource = null;
-  }
   if (_seqHandle) { clearTimeout(_seqHandle); _seqHandle = null; }
   _seqRunning = false;
 }
@@ -1273,8 +1147,8 @@ function getGameSize() {
 }
 
 let { W, H } = getGameSize();
-const GAME_OVER_LINE = Math.floor(H * (85 / 580));
-const DROP_Y_OFFSET  = Math.floor(H * (8 / 580));
+const GAME_OVER_LINE = Math.floor(H * (100 / 580)); // etwas tiefer → kein Überlappen mit Canvas-Rand
+const DROP_Y_OFFSET  = Math.floor(H * (12 / 580));  // mehr Abstand → Preview-Ball klar sichtbar
 const SCALE_FACTOR   = W / 420;
 
 // ========================================
@@ -1384,8 +1258,6 @@ let ANIMALS = getAnimalsForCategory('zoo');
 // Ein vollstaendiger Tag = 600 Punkte → dann wiederholt sich der Zyklus
 // phase 0..1 beschreibt die Tageszeit kontinuierlich
 // ========================================
-const DAY_CYCLE_SCORE = 600; // Punkte pro vollstaendigem Tag (noch fuer Kompatibilitaet)
-
 // Zeitbasierter Tagesablauf: laeuft immer, unabhaengig von Balls oder Score
 // Ein vollstaendiger Tag dauert 4 Minuten (240 Sekunden)
 const DAY_CYCLE_SECONDS = 240;
@@ -1397,69 +1269,65 @@ function getDayPhase(score) {
   const elapsed = (Date.now() - _dayCycleStart) / 1000;
   return (elapsed % DAY_CYCLE_SECONDS) / DAY_CYCLE_SECONDS;
 }
-// phase: 0=Mitternacht, 0.25=Sonnenaufgang, 0.5=Mittag, 0.75=Sonnenuntergang, 1=Mitternacht
+// phase: 0=Mitternacht, 0.5=Mittag, 1=Mitternacht
+// KLARE Tageszeiten: Tag = echtes Hellblau, Nacht = tiefes Dunkelblau
 const SKY_KEYS = [
-  { p: 0.00, top: '#0a0e2a', bot: '#12183a' },  // Mitternacht – tief dunkelblau
-  { p: 0.08, top: '#0c1030', bot: '#141c42' },  // Tiefe Nacht – dunkelblau
-  { p: 0.18, top: '#1a1440', bot: '#241850' },  // Früher Morgen – Indigo
-  { p: 0.24, top: '#3a2860', bot: '#6a3870' },  // Morgenröte – Violett-Purpur
-  { p: 0.28, top: '#8a4060', bot: '#d07050' },  // Sonnenaufgang – Magenta→Orange
-  { p: 0.33, top: '#e08040', bot: '#f0c870' },  // Goldene Stunde – warmes Orange
-  { p: 0.40, top: '#7ab8e8', bot: '#b8daf8' },  // Später Morgen – zartes Blau
-  { p: 0.48, top: '#4898d8', bot: '#88c8f0' },  // Vor Mittag – kräftiges Blau
-  { p: 0.55, top: '#3888d0', bot: '#70b8e8' },  // Mittag – klares Blau
-  { p: 0.63, top: '#4898d8', bot: '#80c0ec' },  // Nachmittag – etwas weicher
-  { p: 0.70, top: '#e09040', bot: '#f0c870' },  // Goldene Stunde – warmes Orange
-  { p: 0.76, top: '#d06040', bot: '#e89060' },  // Sonnenuntergang – tiefes Orange
-  { p: 0.82, top: '#6a2850', bot: '#402060' },  // Dämmerung – Dunkelviolett
-  { p: 0.88, top: '#1a1040', bot: '#100c30' },  // Frühe Nacht – Indigo→Dunkelblau
-  { p: 0.94, top: '#0e0c28', bot: '#0a0e2a' },  // Nacht – fast schwarz-blau
-  { p: 1.00, top: '#0a0e2a', bot: '#12183a' },  // Mitternacht (wieder)
+  { p: 0.00, top: '#0b1035', bot: '#141c50' },  // Mitternacht – tiefes Marineblau
+  { p: 0.15, top: '#0d1240', bot: '#18206a' },  // Tiefe Nacht
+  { p: 0.22, top: '#1e1a50', bot: '#3a2468' },  // Vor Morgenröte – Indigo
+  { p: 0.27, top: '#8a3848', bot: '#c06040' },  // Morgenröte – Rot-Orange
+  { p: 0.33, top: '#d88040', bot: '#f0b860' },  // Goldene Stunde – warmes Orange
+  { p: 0.40, top: '#48a8e0', bot: '#90cef0' },  // Morgen – Hellblau
+  { p: 0.50, top: '#1878c8', bot: '#60b0e8' },  // Mittag – sattes klares Blau
+  { p: 0.60, top: '#2888d0', bot: '#70b8ec' },  // Nachmittag – klares Blau
+  { p: 0.67, top: '#d88040', bot: '#f0b860' },  // Goldene Stunde abends
+  { p: 0.73, top: '#a84030', bot: '#d06040' },  // Sonnenuntergang – Orangerot
+  { p: 0.80, top: '#3a1840', bot: '#201030' },  // Dämmerung – Dunkelviolett
+  { p: 0.88, top: '#101438', bot: '#141848' },  // Frühe Nacht – Dunkelblau
+  { p: 1.00, top: '#0b1035', bot: '#141c50' },  // Mitternacht (wieder)
 ];
 
-// Hügelfarben – an Tageszeit angepasst
+// Hügelfarben – hell tagsüber, sehr dunkel nachts
 const HILL_KEYS = [
   { p: 0.00, c: '#0a1a0e' },  // Nacht – fast schwarz-grün
-  { p: 0.18, c: '#0e2012' },  // Früher Morgen – sehr dunkel
-  { p: 0.28, c: '#5a3820' },  // Sonnenaufgang – warmes Braun
-  { p: 0.36, c: '#4a7830' },  // Morgen – Grün erwacht
-  { p: 0.50, c: '#3a8828' },  // Mittag – sattes Grün
-  { p: 0.65, c: '#4a8030' },  // Nachmittag – leicht gedämpft
-  { p: 0.72, c: '#6a5020' },  // Goldene Stunde – Ocker
-  { p: 0.80, c: '#5a2818' },  // Sonnenuntergang – Dunkelrot
-  { p: 0.90, c: '#121a0e' },  // Dämmerung – dunkel
+  { p: 0.22, c: '#0e1e10' },  // Vor Morgen – sehr dunkel
+  { p: 0.27, c: '#5a3010' },  // Morgenröte – warmes Dunkelbraun
+  { p: 0.35, c: '#4a8830' },  // Morgen – frisches Grün
+  { p: 0.50, c: '#58a838' },  // Mittag – sattes helles Grün
+  { p: 0.60, c: '#509830' },  // Nachmittag
+  { p: 0.67, c: '#706020' },  // Goldene Stunde – Ocker
+  { p: 0.75, c: '#582010' },  // Sonnenuntergang – Dunkelrot
+  { p: 0.85, c: '#121808' },  // Dämmerung
   { p: 1.00, c: '#0a1a0e' },
 ];
 
-// Pflanzenschicht (Vordergrund)
 const PLANT_KEYS = [
-  { p: 0.00, c: '#081408' },
-  { p: 0.18, c: '#0c1a0a' },
-  { p: 0.28, c: '#483010' },
-  { p: 0.36, c: '#387820' },
-  { p: 0.50, c: '#288818' },
-  { p: 0.65, c: '#387820' },
-  { p: 0.72, c: '#584010' },
-  { p: 0.80, c: '#481808' },
-  { p: 0.90, c: '#0e1808' },
-  { p: 1.00, c: '#081408' },
+  { p: 0.00, c: '#081008' },
+  { p: 0.22, c: '#0c1808' },
+  { p: 0.27, c: '#482808' },
+  { p: 0.35, c: '#409030' },
+  { p: 0.50, c: '#50c040' },  // Mittag – lebendiges Grün
+  { p: 0.60, c: '#48a838' },
+  { p: 0.67, c: '#605018' },
+  { p: 0.75, c: '#481808' },
+  { p: 0.85, c: '#101008' },
+  { p: 1.00, c: '#081008' },
 ];
 
-// Body-Hintergrund = untere Himmelsfarbe
+// Body-Hintergrund = untere Himmelsfarbe für nahtlosen Übergang
 const BGBODY_KEYS = [
-  { p: 0.00, c: '#12183a' },
-  { p: 0.18, c: '#141c42' },
-  { p: 0.24, c: '#6a3870' },
-  { p: 0.28, c: '#d07050' },
-  { p: 0.33, c: '#f0c870' },
-  { p: 0.40, c: '#b8daf8' },
-  { p: 0.55, c: '#70b8e8' },
-  { p: 0.65, c: '#80c0ec' },
-  { p: 0.70, c: '#f0c870' },
-  { p: 0.76, c: '#e89060' },
-  { p: 0.82, c: '#402060' },
-  { p: 0.90, c: '#100c30' },
-  { p: 1.00, c: '#12183a' },
+  { p: 0.00, c: '#141c50' },
+  { p: 0.22, c: '#18206a' },
+  { p: 0.27, c: '#c06040' },
+  { p: 0.33, c: '#f0b860' },
+  { p: 0.40, c: '#90cef0' },
+  { p: 0.50, c: '#60b0e8' },
+  { p: 0.60, c: '#70b8ec' },
+  { p: 0.67, c: '#f0b860' },
+  { p: 0.73, c: '#d06040' },
+  { p: 0.80, c: '#201030' },
+  { p: 0.88, c: '#141848' },
+  { p: 1.00, c: '#141c50' },
 ];
 
 // Interpoliert zwischen Keyframes basierend auf phase (0..1)
@@ -1475,11 +1343,6 @@ function _sampleKeys(keys, phase) {
   }
   return keys[0].c || [keys[0].top, keys[0].bot];
 }
-
-// Gibt Biome-Index fuer Musik zurueck (nicht mehr aktiv genutzt)
-
-// Dummy BIOMES fuer Kompatibilitaet mit bodyBackground-Lerp
-const BIOMES = [{ bgColor: '#1a4a2e' }]; // wird dynamisch ueberschrieben
 
 function randNext() { return Math.floor(Math.random() * (MAX_DROP_ANIMAL_INDEX + 1)); }
 
@@ -1521,7 +1384,7 @@ function drawPreview(type) {
   const logicalSize = 48;
   pctx.clearRect(0, 0, logicalSize, logicalSize);
   const a  = ANIMALS[type];
-  const r  = Math.min(a.r / SCALE_FACTOR, 20); // logical pixels, not scaled
+  const r  = Math.max(1, Math.min(a.r / SCALE_FACTOR, 20)); // guard: nie <= 0
   const cx = logicalSize / 2;
   const cy = logicalSize / 2;
   pctx.save();
@@ -1562,28 +1425,31 @@ function updateScore(score) {
 }
 
 // Body-Hintergrundfarbe wird direkt aus dem Tageszyklus berechnet
-let _bgBodyColor = '#b0a8d8';
-let _bgSky0 = '#c8c0e8';
-let _bgSky1 = '#b0a8d8';
+let _bgBodyColor = '#141c50';
+let _bgLerpSky0  = '#0b1035';
+let _bgLerpSky1  = '#141c50';
 
 // Wird jeden Frame aus Background.draw() aufgerufen
 function tickBodyBackground(score, speed) {
   const phase = getDayPhase(score);
   const sky = _sampleKeys(SKY_KEYS, phase);
-  _bgSky0 = lerpHex(_bgSky0, sky[0], speed);
-  _bgSky1 = lerpHex(_bgSky1, sky[1], speed);
-  // Body-Hintergrund = identisch mit Biome-Canvas-Hintergrund
-  document.body.style.background = `linear-gradient(180deg, ${_bgSky0} 0%, ${_bgSky1} 100%)`;
+  _bgLerpSky0 = lerpHex(_bgLerpSky0, sky[0], speed);
+  _bgLerpSky1 = lerpHex(_bgLerpSky1, sky[1], speed);
+  _bgBodyColor = _bgLerpSky1;
+  // Body = gleicher Verlauf wie Spielfeld-Himmel → nahtloser Übergang
+  document.body.style.background =
+    `linear-gradient(180deg, ${_bgLerpSky0} 0%, ${_bgLerpSky1} 100%)`;
 }
 
 // Einmalig beim Start / Reset aufrufen
 function updateDynamicBackground(score) {
   const phase = getDayPhase(score);
   const sky = _sampleKeys(SKY_KEYS, phase);
-  _bgSky0 = sky[0];
-  _bgSky1 = sky[1];
+  _bgLerpSky0  = sky[0];
+  _bgLerpSky1  = sky[1];
   _bgBodyColor = sky[1];
-  document.body.style.background = `linear-gradient(180deg, ${sky[0]} 0%, ${sky[1]} 100%)`;
+  document.body.style.background =
+    `linear-gradient(180deg, ${sky[0]} 0%, ${sky[1]} 100%)`;
 }
 
 // ========================================
@@ -1597,8 +1463,8 @@ function initMergeBar() {
   mergeBar.innerHTML = '';
   mergeCells.length = 0;
 
-  const barWidth  = mergeBar.offsetWidth;
-  const cellSize  = Math.floor((barWidth - 20 - 9 * 3) / 10);
+  const barWidth  = mergeBar.offsetWidth || 380; // Fallback wenn noch nicht im DOM
+  const cellSize  = Math.max(8, Math.floor((barWidth - 20 - 9 * 3) / 10));
 
   ANIMALS.forEach((a, i) => {
     const cell = document.createElement('div');
@@ -1631,8 +1497,9 @@ function drawMergeCell(i, size, ctx) {
   const a  = ANIMALS[i];
   const cx = size / 2;
   const cy = size / 2;
-  const r  = size * 0.42;
+  const r  = Math.max(1, size * 0.42);  // Guard: nie negativ/0
 
+  if (size <= 0) return;
   ctx.clearRect(0, 0, size, size);
 
   // Fill
@@ -1654,12 +1521,15 @@ function drawMergeCell(i, size, ctx) {
   ctx.font = `${fontSize}px serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0,0,0,0.4)';
-  ctx.shadowBlur = 2;
-  ctx.fillStyle = '#000'; // reset fillStyle for shadow trick, then draw emoji
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = Math.max(1, r * 0.15);
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 1;
+  ctx.fillStyle = 'white'; // Emojis ignorieren fillStyle, aber weiß ist sicherer Fallback
   ctx.fillText(a.emoji, cx, cy + 1);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
 }
 
 function flashMergeCell(i) {
@@ -1765,25 +1635,24 @@ buildMusicTrackGrid();
 // ========================================
 class Background {
   constructor(scene) {
-    // Phaser-Hintergrund: transparent (Fullscreen-Canvas macht die Arbeit)
-    scene.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
-    this.time   = 0;
-    this._frame = 0;
-    this.sky0   = '#0a0e2a';
-    this.sky1   = '#12183a';
-    this.hills  = '#0a1a0e';
-    this.plants = '#081408';
-
-    // Fullscreen-Canvas setup
-    this._fgCanvas = document.getElementById('biome-bg-canvas');
-    this._fgCtx    = this._fgCanvas.getContext('2d');
-    this._resize();
-    window.addEventListener('resize', () => this._resize());
-  }
-
-  _resize() {
-    this._fgCanvas.width  = window.innerWidth;
-    this._fgCanvas.height = window.innerHeight;
+    this._scene  = scene;
+    this.off     = document.createElement('canvas');
+    this.off.width  = W;
+    this.off.height = H;
+    this.ctx     = this.off.getContext('2d');
+    this.tex     = scene.textures.createCanvas('bg', W, H);
+    this.img     = scene.add.image(0, 0, 'bg').setOrigin(0, 0).setDepth(-10);
+    this.time    = 0;
+    this._frame  = 0;
+    // Interpolierte Himmelsfarben – starten beim aktuellen Tageszyklus
+    const initPhase = getDayPhase(0);
+    const initSky   = _sampleKeys(SKY_KEYS, initPhase);
+    this.sky0    = initSky[0];
+    this.sky1    = initSky[1];
+    this.hills   = _sampleKeys(HILL_KEYS,  initPhase);
+    this.plants  = _sampleKeys(PLANT_KEYS, initPhase);
+    // Phaser-Kamera sofort auf Himmelfarbe setzen → kein schwarzer Blitz beim Start
+    scene.cameras.main.setBackgroundColor(this.sky0);
   }
 
   draw(score, delta) {
@@ -1801,207 +1670,77 @@ class Background {
     this.plants = lerpHex(this.plants, _sampleKeys(PLANT_KEYS, phase), spd);
     tickBodyBackground(score, spd);
 
+    // Phaser-Kamera-Hintergrund = obere Himmelsfarbe → kein transparenter Rand
+    if (this._frame % 4 === 0 && this._scene) {
+      this._scene.cameras.main.setBackgroundColor(this.sky0);
+    }
+
     if (this._frame % 2 !== 0) return;
 
-    const ctx = this._fgCtx;
-    const VW  = this._fgCanvas.width;
-    const VH  = this._fgCanvas.height;
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, W, H);
 
-    ctx.clearRect(0, 0, VW, VH);
-
-    // Vollbild-Himmelsverlauf
-    const grad = ctx.createLinearGradient(0, 0, 0, VH * 0.80);
+    // Himmelsverlauf – volle Höhe damit kein transparenter Streifen entsteht
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, this.sky0);
+    grad.addColorStop(0.75, this.sky1);
     grad.addColorStop(1, this.sky1);
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, VW, VH);
+    ctx.fillRect(0, 0, W, H);
 
-    // Sterne (nachts)
-    this._drawStars(ctx, phase, VW, VH);
-    // Sonne / Mond
-    this._drawCelestialBody(ctx, phase, VW, VH);
-    // Atmosphäre
-    this._drawAtmosphere(ctx, phase, VW, VH);
-    // Wolken
-    if (phase > 0.30 && phase < 0.85) {
-      const ca = Math.min(1, Math.min(phase - 0.30, 0.85 - phase) * 8) * 0.55;
-      this._drawClouds(ctx, this.time, `rgba(255,255,255,${ca})`, VW, VH);
+    // Wolken – nur tagsüber sichtbar (phase 0.35..0.65)
+    if (phase > 0.35 && phase < 0.65) {
+      const ca = Math.min(1, Math.min(phase - 0.35, 0.65 - phase) * 12) * 0.45;
+      if (ca > 0.01) this._drawClouds(ctx, this.time, `rgba(255,255,255,${ca})`);
     }
-    // Hügel über die gesamte Breite
-    this._hill(ctx, VH * 0.22, 0.65, this.hills,  0.92, VW, VH);
-    this._hill(ctx, VH * 0.14, 1.15, this.plants, 1.00, VW, VH);
+
+    this._hill(ctx, 125 * SCALE_FACTOR, 0.65, this.hills,  0.92);
+    this._hill(ctx, 82  * SCALE_FACTOR, 1.15, this.plants, 1.0);
+    this.tex.getContext().drawImage(this.off, 0, 0);
+    this.tex.refresh();
   }
 
-  _drawStars(ctx, phase, VW, VH) {
-    let alpha = 0;
-    if (phase < 0.24)      alpha = Math.min(1, 1 - phase / 0.24);
-    else if (phase > 0.80) alpha = Math.min(1, (phase - 0.80) / 0.15);
-    if (alpha <= 0.02) return;
-    const STARS = [
-      [0.08,0.05],[0.18,0.03],[0.32,0.08],[0.44,0.02],[0.55,0.07],
-      [0.65,0.04],[0.74,0.09],[0.83,0.03],[0.90,0.07],[0.96,0.04],
-      [0.12,0.14],[0.27,0.11],[0.40,0.16],[0.52,0.12],[0.61,0.18],
-      [0.70,0.13],[0.80,0.17],[0.88,0.10],[0.05,0.19],[0.48,0.06],
-      [0.22,0.20],[0.36,0.05],[0.58,0.15],[0.77,0.06],[0.93,0.14],
+  _drawClouds(ctx, t, color) {
+    // Vordefinierte Wolken-Templates: [xOffset, yFrac, baseR, speed, puffs]
+    // puffs: relative Positionen [dx, dy, rScale] der einzelnen Wolken-Blasen
+    const clouds = [
+      { xOff: 0,   yFrac: 0.04, r: 9,  spd: 1.0, puffs: [[0,0,1],[0.8,-0.25,0.72],[1.65,0,0.55],[1.4,0.12,0.4]] },
+      { xOff: 110, yFrac: 0.09, r: 14, spd: 0.6, puffs: [[0,0,1],[0.9,-0.3,0.8],[1.9,0,0.65],[1.45,-0.08,0.5],[-0.5,0.05,0.45]] },
+      { xOff: 220, yFrac: 0.05, r: 7,  spd: 1.4, puffs: [[0,0,1],[0.75,-0.2,0.7],[1.5,0,0.5]] },
+      { xOff: 310, yFrac: 0.11, r: 11, spd: 0.8, puffs: [[0,0,1],[0.85,-0.28,0.78],[1.7,0.05,0.6],[0.4,0.1,0.42]] },
+      { xOff: 60,  yFrac: 0.13, r: 6,  spd: 1.6, puffs: [[0,0,1],[0.7,-0.18,0.65],[1.4,0,0.48]] },
+      { xOff: 170, yFrac: 0.02, r: 12, spd: 0.7, puffs: [[0,0,1],[0.95,-0.32,0.82],[1.85,0,0.62],[1.3,-0.1,0.45],[-0.4,0.08,0.38]] },
     ];
-    ctx.save();
-    STARS.forEach(([fx, fy], i) => {
-      const twinkle = 0.5 + 0.5 * Math.sin(this.time * 1.8 + i * 2.3);
-      const a = alpha * (0.55 + twinkle * 0.45);
-      const r = (0.8 + (i % 3) * 0.7);
-      // Auf dunklem Nachthimmel: weiß/bläulich-weiß
-      ctx.fillStyle = i % 3 === 0
-        ? `rgba(255,248,220,${a})`    // warmweiß
-        : i % 3 === 1
-          ? `rgba(200,220,255,${a})`  // kaltblau-weiß
-          : `rgba(255,255,255,${a})`; // reinweiß
+
+    ctx.fillStyle = color;
+    for (const c of clouds) {
+      const totalW = W + 200 * SCALE_FACTOR;
+      const x = ((c.xOff * SCALE_FACTOR + t * c.spd * 8 * SCALE_FACTOR) % totalW) - 60 * SCALE_FACTOR;
+      const y = c.yFrac * H;
+      const r = c.r * SCALE_FACTOR;
       ctx.beginPath();
-      ctx.arc(fx * VW, fy * VH, r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  _drawCelestialBody(ctx, phase, VW, VH) {
-    const isSunVisible = phase >= 0.22 && phase <= 0.82;
-    if (isSunVisible) {
-      const sunPhase = (phase - 0.22) / (0.80 - 0.22);
-      const sx = 0.06 + sunPhase * 0.88;
-      const arcT = Math.sin(sunPhase * Math.PI);
-      const sy = 0.20 - arcT * 0.15;
-      const sr = (22 + (1 - arcT) * 10);
-      let inner, outer;
-      if (sunPhase < 0.12 || sunPhase > 0.88) {
-        inner = '#ffdd99'; outer = '#ff7700';
-      } else if (sunPhase < 0.28 || sunPhase > 0.72) {
-        inner = '#fff5c0'; outer = '#ffbb20';
-      } else {
-        inner = '#fffef0'; outer = '#ffe840';
+      for (const [dx, dy, rs] of c.puffs) {
+        ctx.moveTo(x + dx * r + rs * r, y + dy * r);
+        const arcR5 = Math.max(0.1, rs * r);
+        ctx.arc(x + dx * r, y + dy * r, arcR5, 0, Math.PI * 2);
       }
-      if (sunPhase < 0.18 || sunPhase > 0.82) {
-        const edge = sunPhase < 0.18 ? sunPhase / 0.18 : (1 - sunPhase) / 0.18;
-        const grd = ctx.createRadialGradient(sx*VW, sy*VH, 0, sx*VW, sy*VH, sr * 6);
-        grd.addColorStop(0, `rgba(255,130,30,${0.40 * (1 - edge * 0.5)})`);
-        grd.addColorStop(1, 'rgba(255,80,0,0)');
-        ctx.fillStyle = grd; ctx.fillRect(0, 0, VW, VH);
-      }
-      this._drawSun(ctx, sx * VW, sy * VH, sr, inner, outer);
-    }
-
-    // Mond: einfacher leuchtender Kreis
-    let moonAlpha = 0, moonX = 0, moonY = 0;
-    if (phase < 0.22) {
-      const mp = phase / 0.22;
-      moonX = 0.72 + mp * 0.22;
-      moonY = 0.07 + mp * 0.10;
-      moonAlpha = phase < 0.18 ? 1 : 1 - (phase - 0.18) / 0.04;
-    } else if (phase > 0.80) {
-      const mp = (phase - 0.80) / 0.20;
-      moonX = 0.06 + mp * 0.24;
-      moonY = 0.17 - mp * 0.12;
-      moonAlpha = mp < 0.12 ? mp / 0.12 : 1;
-    }
-    if (moonAlpha > 0.02) {
-      ctx.save();
-      ctx.globalAlpha = moonAlpha;
-      this._drawMoon(ctx, moonX * VW, moonY * VH, 20);
-      ctx.restore();
-    }
-  }
-
-  // Einfacher leuchtender Mondkreis — keine Sichel, kein Compositing
-  _drawMoon(ctx, x, y, r) {
-    // Weicher äußerer Halo
-    const halo = ctx.createRadialGradient(x, y, r * 0.8, x, y, r * 4.5);
-    halo.addColorStop(0,   'rgba(200,215,255,0.28)');
-    halo.addColorStop(0.4, 'rgba(180,200,255,0.10)');
-    halo.addColorStop(1,   'rgba(160,185,240,0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(x, y, r * 4.5, 0, Math.PI * 2); ctx.fill();
-
-    // Mondscheibe – warm-cremig mit radialem Gradient (wie eine Glühbirne)
-    const disc = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, 0, x, y, r);
-    disc.addColorStop(0,   '#fffef5');   // Zentrum: fast reinweiß
-    disc.addColorStop(0.4, '#f8f0d8');   // Mitte: warm-crème
-    disc.addColorStop(0.78,'#e8d8a8');   // Rand: goldbeige
-    disc.addColorStop(1,   '#d4c080');   // Außenrand: gedämpftes Gold
-    ctx.fillStyle = disc;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-
-    // Zarter Leuchtring
-    const ring = ctx.createRadialGradient(x, y, r * 0.85, x, y, r * 1.6);
-    ring.addColorStop(0,   'rgba(255,248,210,0.18)');
-    ring.addColorStop(1,   'rgba(255,240,180,0)');
-    ctx.fillStyle = ring;
-    ctx.beginPath(); ctx.arc(x, y, r * 1.6, 0, Math.PI * 2); ctx.fill();
-  }
-
-  _drawAtmosphere(ctx, phase, VW, VH) {
-    if ((phase > 0.22 && phase < 0.36) || (phase > 0.70 && phase < 0.84)) {
-      const frac = phase < 0.5
-        ? Math.min(1, (phase - 0.22) / 0.07) * Math.min(1, (0.36 - phase) / 0.06)
-        : Math.min(1, (phase - 0.70) / 0.06) * Math.min(1, (0.84 - phase) / 0.06);
-      const grd = ctx.createLinearGradient(0, VH * 0.30, 0, VH * 0.75);
-      grd.addColorStop(0, `rgba(255,160,80,${frac * 0.30})`);
-      grd.addColorStop(1, `rgba(255,120,40,0)`);
-      ctx.fillStyle = grd; ctx.fillRect(0, 0, VW, VH);
-    }
-    if (phase > 0.44 && phase < 0.66) {
-      const f = Math.min(1, Math.min(phase - 0.44, 0.66 - phase) * 10);
-      ctx.fillStyle = `rgba(255,255,255,${f * 0.05})`;
-      ctx.fillRect(0, 0, VW, VH);
-    }
-  }
-
-  _drawSun(ctx, x, y, r, inner, outer) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(this.time * 0.22);
-    ctx.fillStyle = 'rgba(255,235,80,0.16)';
-    for (let i = 0; i < 8; i++) {
-      ctx.rotate(Math.PI / 4);
-      ctx.beginPath(); ctx.moveTo(0, 0);
-      ctx.lineTo(r * 0.55, -r * 0.12); ctx.lineTo(r * 1.80, 0); ctx.lineTo(r * 0.55, r * 0.12);
-      ctx.closePath(); ctx.fill();
-    }
-    ctx.restore();
-    const halo = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 3.2);
-    halo.addColorStop(0, `${outer}55`); halo.addColorStop(1, `${outer}00`);
-    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI * 2); ctx.fill();
-    const sg = ctx.createRadialGradient(x - r * 0.22, y - r * 0.22, 0, x, y, r);
-    sg.addColorStop(0, inner); sg.addColorStop(1, outer);
-    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-  }
-
-  _drawClouds(ctx, t, color, VW, VH) {
-    /*for (let i = 0; i < 5; i++) {
-      const x = (i * 220 + t * 9 * 60) % (VW + 120) - 60;
-      const y = (28 + i * 22) * (VH / 600);
-      //const r = (18 + i * 10) * (VW / 420);
-      const r = 18 + i * 6;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x,           y,           r,         0, Math.PI * 2);
-      ctx.arc(x + r * 0.9, y - r * 0.2, r * 0.76, 0, Math.PI * 2);
-      ctx.arc(x + r * 1.8, y,           r * 0.62,  0, Math.PI * 2);
       ctx.fill();
-    }*/
+    }
   }
 
-  _hill(ctx, h, spd, color, alpha, VW, VH) {
+  _hill(ctx, h, spd, color, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(0, VH);
-    for (let x = 0; x <= VW; x += 3) {
-      const nx = x / VW;
-      const y = VH - h
-        + Math.sin(nx * 12 + this.time * spd) * VH * 0.025
-        + Math.sin(nx * 5  + this.time * spd * 0.4) * VH * 0.015;
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W; x += 3 * SCALE_FACTOR) {
+      const y = H - h
+        + Math.sin(x * 0.017 / SCALE_FACTOR + this.time * spd) * 13 * SCALE_FACTOR
+        + Math.sin(x * 0.007 / SCALE_FACTOR + this.time * spd * 0.4) * 7 * SCALE_FACTOR;
       ctx.lineTo(x, y);
     }
-    ctx.lineTo(VW, VH);
+    ctx.lineTo(W, H);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -2018,7 +1757,7 @@ class BallManager {
   drop(mouseX, type) {
     const a = ANIMALS[type];
     const x = Phaser.Math.Clamp(mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
-    const y = GAME_OVER_LINE - a.r - DROP_Y_OFFSET;
+    const y = GAME_OVER_LINE - a.r; // Unterkante des Balls liegt auf der roten Linie
     playDropSound();
     vibrate(5);
     return this.spawn(x, y, type, 0.3);
@@ -2027,40 +1766,59 @@ class BallManager {
   spawn(x, y, type, scale = 0.6) {
     const a    = ANIMALS[type];
     const body = this.scene.matter.add.circle(x, y, a.r, {
-      restitution:    0.30,
-      friction:       0.12,
-      frictionStatic: 0.08,
-      frictionAir:    0.008,
-      density:        0.002,
-      slop:           0.02,
+      restitution:    0.18,
+      friction:       0.35,
+      frictionStatic: 0.40,
+      frictionAir:    0.012,
+      density:        0.0025,
+      slop:           0.01,
       label:          'ball',
     });
     body._type      = type;
     body._merged    = false;
     body._spawnTime = Date.now();
 
-    const container = this.scene.add.container(x, y).setDepth(1);
-    const circle    = this.scene.add.graphics();
+    // Ball-Textur per offscreen Canvas mit echtem Anti-Aliasing rendern
+    const texKey = `ball_${type}`;
+    if (!this.scene.textures.exists(texKey)) {
+      const dpr  = Math.min(window.devicePixelRatio || 1, 2);
+      const r    = Math.max(4, a.r);  // mindestens 4px Radius
+      const size = Math.ceil(r * 2 + 6) * dpr;
+      const oc   = document.createElement('canvas');
+      oc.width   = size; oc.height = size;
+      const oc2  = oc.getContext('2d');
+      oc2.scale(dpr, dpr);
+      const cx = (size / dpr) / 2, cy = (size / dpr) / 2;
+      const bw   = Math.max(0.5, Math.min(r * 0.09, r * 0.25)); // Border nie > 25% des Radius
+      const fillR_val = Math.max(1, r - 0.5);
+      const strokeR   = Math.max(0.5, r - 0.5 - bw * 0.5);    // Guard: nie negativ
+      // Weicher Schatten-Glow
+      oc2.shadowColor = 'rgba(0,0,0,0.28)';
+      oc2.shadowBlur  = r * 0.25;
+      // Fill
+      const fillR = (a.color >> 16) & 0xff;
+      const fillG = (a.color >> 8)  & 0xff;
+      const fillB =  a.color        & 0xff;
+      oc2.fillStyle = `rgb(${fillR},${fillG},${fillB})`;
+      oc2.beginPath(); oc2.arc(cx, cy, fillR_val, 0, Math.PI * 2); oc2.fill();
+      // Border – sauber innen, kein Aliasing
+      oc2.shadowBlur  = 0;
+      const bc = _borderColorFor(a.color);
+      const br = (bc >> 16) & 0xff, bg2 = (bc >> 8) & 0xff, bb = bc & 0xff;
+      oc2.strokeStyle = `rgba(${br},${bg2},${bb},0.88)`;
+      oc2.lineWidth   = bw;
+      oc2.beginPath(); oc2.arc(cx, cy, strokeR, 0, Math.PI * 2); oc2.stroke();
+      this.scene.textures.addCanvas(texKey, oc);
+    }
 
-    // Farbiger Rand mit echtem Kontrast zur Ballfarbe
-    const borderHex = _borderColorFor(a.color);
-
-    // Smooth filled circle
-    circle.fillStyle(a.color, 1);
-    circle.fillCircle(0, 0, a.r);
-
-    // Colored border (darker shade of ball color, not black)
-    const borderWidth = Math.max(2, a.r * 0.09);
-    circle.lineStyle(borderWidth, borderHex, 0.85);
-    circle.strokeCircle(0, 0, a.r - borderWidth * 0.5);
-
-    const label = this.scene.add.text(0, 1, a.emoji, {
+    const sprite = this.scene.add.image(0, 0, texKey).setDisplaySize(a.r * 2 + 4, a.r * 2 + 4);
+    const label  = this.scene.add.text(0, 1, a.emoji, {
       fontSize:   Math.floor(a.r * 1.4) + 'px',
       fontFamily: 'serif',
     }).setOrigin(0.5, 0.5);
 
-    container.add([circle, label]).setScale(scale);
-    this.balls.push({ body, container, _scale: scale });
+    const container = this.scene.add.container(x, y, [sprite, label]).setDepth(1).setScale(scale);
+    this.balls.push({ body, container, _scale: scale, _texKey: texKey });
     return body;
   }
 
@@ -2092,27 +1850,55 @@ class BallManager {
       try { this.scene.matter.world.remove(b.body); } catch (_) {}
     }
     this.balls = [];
+    // Ball-Texturen zurücksetzen (werden beim nächsten Spawn neu erzeugt)
+    for (let t = 0; t < 10; t++) {
+      const key = `ball_${t}`;
+      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
+    }
   }
 
-  // Tauscht nur Farbe + Emoji aus, Physik-Body bleibt an Ort und Stelle
   refreshVisuals() {
+    // Alle Ball-Texturen verwerfen (neue Kategorie → neue Farben)
+    for (let t = 0; t < 10; t++) {
+      const key = `ball_${t}`;
+      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
+    }
     for (const b of this.balls) {
       if (!b.body) continue;
       const type = b.body._type;
       const a    = ANIMALS[Math.min(type, ANIMALS.length - 1)];
 
-      // Container-Kinder: [0] = Grafik-Kreis, [1] = Emoji-Label
-      const circle = b.container.list[0];
-      const label  = b.container.list[1];
+      // Neue Textur erzeugen
+      const texKey = `ball_${type}`;
+      if (!this.scene.textures.exists(texKey)) {
+        const dpr  = Math.min(window.devicePixelRatio || 1, 2);
+        const r    = Math.max(4, a.r);
+        const size = Math.ceil(r * 2 + 6) * dpr;
+        const oc   = document.createElement('canvas');
+        oc.width   = size; oc.height = size;
+        const oc2  = oc.getContext('2d');
+        oc2.scale(dpr, dpr);
+        const cx = (size / dpr) / 2, cy = (size / dpr) / 2;
+        const bw      = Math.max(0.5, Math.min(r * 0.09, r * 0.25));
+        const fillR_v = Math.max(1, r - 0.5);
+        const strokeR = Math.max(0.5, r - 0.5 - bw * 0.5);    // Guard: nie negativ
+        oc2.shadowColor = 'rgba(0,0,0,0.28)'; oc2.shadowBlur = r * 0.25;
+        const fillR = (a.color >> 16) & 0xff, fillG = (a.color >> 8) & 0xff, fillB = a.color & 0xff;
+        oc2.fillStyle = `rgb(${fillR},${fillG},${fillB})`;
+        oc2.beginPath(); oc2.arc(cx, cy, fillR_v, 0, Math.PI * 2); oc2.fill();
+        oc2.shadowBlur = 0;
+        const bw2 = bw;
+        const bc = _borderColorFor(a.color);
+        const br = (bc >> 16) & 0xff, bg2 = (bc >> 8) & 0xff, bb = bc & 0xff;
+        oc2.strokeStyle = `rgba(${br},${bg2},${bb},0.88)`; oc2.lineWidth = bw2;
+        oc2.beginPath(); oc2.arc(cx, cy, strokeR, 0, Math.PI * 2); oc2.stroke();
+        this.scene.textures.addCanvas(texKey, oc);
+      }
 
-      if (circle && circle.clear) {
-        circle.clear();
-        circle.fillStyle(a.color, 1);
-        circle.fillCircle(0, 0, a.r);
-        const borderHex = _borderColorFor(a.color);
-        const borderWidth = Math.max(2, a.r * 0.09);
-        circle.lineStyle(borderWidth, borderHex, 0.85);
-        circle.strokeCircle(0, 0, a.r - borderWidth * 0.5);
+      const sprite = b.container.list[0];
+      const label  = b.container.list[1];
+      if (sprite && sprite.setTexture) {
+        sprite.setTexture(texKey).setDisplaySize(a.r * 2 + 4, a.r * 2 + 4);
       }
       if (label && label.setText) {
         label.setText(a.emoji).setFontSize(Math.floor(a.r * 1.4) + 'px');
@@ -2270,7 +2056,17 @@ class GameScene extends Phaser.Scene {
     this._initInput();
     this._initCollisions();
     startBgMusic();
-    setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 500);
+    setTimeout(() => {
+      // Erst game-wrapper einblenden, dann loading-screen ausblenden
+      document.getElementById('game-wrapper').style.display = 'flex';
+      document.getElementById('loading-screen').classList.add('hidden');
+      if (window._stopStartBg) window._stopStartBg();
+      // Canvas ausblenden nach Fade
+      setTimeout(() => {
+        const c = document.getElementById('start-bg-canvas');
+        if (c) c.style.display = 'none';
+      }, 600);
+    }, 500);
   }
 
   _initState() {
@@ -2287,24 +2083,17 @@ class GameScene extends Phaser.Scene {
   }
 
   _initPhysics() {
-    this.matter.world.setGravity(0, 1.4);
-    // Wände und Boden mit sehr niedriger Reibung → kein Kleben
-    const wallOpts = { isStatic: true, friction: 0.0, frictionStatic: 0.0, restitution: 0.1 };
+    this.matter.world.setGravity(0, 1.8);
+    // Wände und Boden
+    const wallOpts = { isStatic: true, friction: 0.0, frictionStatic: 0.0, restitution: 0.05 };
     this.matter.add.rectangle(W / 2, H + 30 * SCALE_FACTOR, W + 200 * SCALE_FACTOR, 60 * SCALE_FACTOR,
-      { ...wallOpts, friction: 0.3, restitution: 0.15 });  // Boden etwas griffiger
+      { ...wallOpts, friction: 0.4, frictionStatic: 0.6, restitution: 0.05 });  // Boden: mehr Grip, kaum Bounce
     this.matter.add.rectangle(-28 * SCALE_FACTOR, H / 2, 56 * SCALE_FACTOR, H * 3, wallOpts);
     this.matter.add.rectangle(W + 28 * SCALE_FACTOR, H / 2, 56 * SCALE_FACTOR, H * 3, wallOpts);
   }
 
   _initGraphics() {
     this.bg           = new Background(this);
-
-    // Glas-Overlay: halbtransparenter dunkler Schleier fürs Spielfeld
-    // gibt visuelle Tiefe und trennt Spielfeld klar vom Biome-Hintergrund
-    const glass = this.add.graphics().setDepth(-5);
-    glass.fillStyle(0x000000, 0.28);
-    glass.fillRect(0, 0, W, H);
-
     this.ballMgr      = new BallManager(this);
     this.effects      = new EffectsManager(this);
     this.guideGfx     = this.add.graphics().setDepth(2);
@@ -2317,12 +2106,12 @@ class GameScene extends Phaser.Scene {
 
     // Countdown-Anzeige (erscheint bei Gefahr)
     this._countdownGfx  = this.add.graphics().setDepth(12);
-    this._countdownText = this.add.text(W / 2, GAME_OVER_LINE - 22 * SCALE_FACTOR, '', {
+    this._countdownText = this.add.text(W / 2, GAME_OVER_LINE + 14 * SCALE_FACTOR, '', {
       fontFamily: 'system-ui',
       fontSize:   Math.floor(15 * SCALE_FACTOR) + 'px',
       fontStyle:  'bold',
       color:      '#ff6666',
-    }).setOrigin(0.5, 0.5).setDepth(13).setAlpha(0);
+    }).setOrigin(0.5, 0).setDepth(13).setAlpha(0);
     this._warningActive = false;
   }
 
@@ -2402,7 +2191,8 @@ class GameScene extends Phaser.Scene {
           this.ballMgr.remove(bodyA);
           this.ballMgr.remove(bodyB);
           const nb = this.ballMgr.spawn(mx, my, nt);
-          this.matter.body.setVelocity(nb, { x: vx, y: Math.max(vy, 1) });
+          // Neuer Ball: kombinierte Velocity + leichter Downward-Impuls
+          this.matter.body.setVelocity(nb, { x: vx * 0.5, y: Math.max(vy, 2.5) });
           this.score += (nt + 1) * 2;
           updateScore(this.score);
           flashMergeCell(nt);
@@ -2460,7 +2250,7 @@ class GameScene extends Phaser.Scene {
     if (this.gameOver) return;
     const a = ANIMALS[this.currentType];
     const x = Phaser.Math.Clamp(this.mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
-    this.guideGfx.lineStyle(1 * SCALE_FACTOR, 0xffffff, 0.2);
+    this.guideGfx.lineStyle(1 * SCALE_FACTOR, 0xffffff, 0.18);
     this._dashedLine(this.guideGfx, x, GAME_OVER_LINE, x, H, 6 * SCALE_FACTOR, 5 * SCALE_FACTOR);
   }
 
@@ -2486,15 +2276,16 @@ class GameScene extends Phaser.Scene {
     if (this.gameOver) { this.previewLabel.setVisible(false); return; }
     const a = ANIMALS[this.currentType];
     const x = Phaser.Math.Clamp(this.mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
-    const y = GAME_OVER_LINE - a.r - DROP_Y_OFFSET;
+    // Ball-Unterkante liegt genau auf der roten Gefahrenlinie
+    const y = GAME_OVER_LINE - a.r;
 
-    // Schatten
-    this.previewGfx.fillStyle(0x000000, 0.15);
-    this.previewGfx.fillEllipse(x, y + a.r + 5 * SCALE_FACTOR, a.r * 1.7, a.r * 0.38);
+    // Schatten unter dem Ball
+    this.previewGfx.fillStyle(0x000000, 0.12);
+    this.previewGfx.fillEllipse(x, y + a.r + 3 * SCALE_FACTOR, a.r * 1.8, a.r * 0.32);
     // Pastellkreis
     this.previewGfx.fillStyle(a.color, 0.92);
     this.previewGfx.fillCircle(x, y, a.r);
-    // Farbige Umrandung (dunklere Variante der Ballfarbe)
+    // Farbige Umrandung
     const borderHexP = _borderColorFor(a.color);
     const bwP = Math.max(2, a.r * 0.09);
     this.previewGfx.lineStyle(bwP, borderHexP, 0.85);
@@ -2527,7 +2318,8 @@ class GameScene extends Phaser.Scene {
       panel.lineStyle(3 * SCALE_FACTOR, 0xffd700, 0.9);
       panel.strokeRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 20 * SCALE_FACTOR);
 
-      const elephant = this.add.text(W / 2, H / 2 - 72 * SCALE_FACTOR, '🐘', {
+      const winEmoji = ANIMALS[ANIMALS.length - 1].emoji;
+      const elephant = this.add.text(W / 2, H / 2 - 72 * SCALE_FACTOR, winEmoji, {
         fontSize: Math.floor(52 * SCALE_FACTOR) + 'px',
       }).setOrigin(0.5, 0.5).setDepth(17);
 
@@ -2736,31 +2528,38 @@ function startGameAfterUserTap() {
   } catch (e) { console.warn(e); }
 
   document.getElementById('start-screen').style.display = 'none';
+  // game-wrapper erst nach dem Laden zeigen
+  const ls = document.getElementById('loading-screen');
+  // Aktives Kategorie-Emoji im Ladebildschirm zeigen
+  const loadEmoji = ls.querySelector('.loading-emoji');
+  if (loadEmoji) loadEmoji.textContent = EMOJI_CATEGORIES[activeCategory].emojis[EMOJI_CATEGORIES[activeCategory].emojis.length - 1];
+  // start-bg-canvas läuft weiter als Ladebildschirm-Hintergrund
+  ls.style.display = 'flex';
   initMergeBar();
 
   new Phaser.Game({
-    type:            Phaser.CANVAS,
+    type:            Phaser.CANVAS,   // Canvas statt AUTO – stabiler auf iOS Safari
     width:           W,
     height:          H,
-    resolution:      Math.min(window.devicePixelRatio || 1, 2),
+    resolution:      Math.min(window.devicePixelRatio || 1, 2), // max 2x – spart GPU
     pixelArt:        false,
-    roundPixels:     true,
-    backgroundColor: 'rgba(0,0,0,0)',
-    transparent:     true,
+    roundPixels:     true,            // verhindert Sub-Pixel-Zittern
+    backgroundColor: '#141c50',
+    transparent:     false,
     parent:          'phaser-container',
     fps: {
       target: 60,
-      forceSetTimeOut: false,
-      smoothStep: true,
+      forceSetTimeOut: false,        // rAF bevorzugen
+      smoothStep: true,              // glättet unregelmäßige Frames
     },
     physics: {
       default: 'matter',
       matter: {
-        gravity:            { y: 1.4 },
-        debug:              false,
-        enableSleeping:     false,
-        positionIterations: 10,
-        velocityIterations: 8,
+        gravity:              { y: 1.8 },
+        debug:                false,
+        enableSleeping:       false,
+        positionIterations:   12,   // mehr Iterations → keine Überlappungen
+        velocityIterations:   10,   // präzisere Geschwindigkeitsauflösung
         constraintIterations: 4,
       },
     },
@@ -2775,14 +2574,150 @@ window.addEventListener('DOMContentLoaded', () => {
   const versionDisplay = document.getElementById('version-display');
   if (versionDisplay) versionDisplay.textContent = `Version ${VERSION}`;
 
-  updateDynamicBackground(0);
+  // ── Animierter Startmenü-Hintergrund ──────────────────────────────────────
+  const startBgCanvas = document.getElementById('start-bg-canvas');
+  const sbCtx = startBgCanvas.getContext('2d');
+  let sbTime = 0;
+  let sbSky0 = '#48a8e0', sbSky1 = '#90cef0';
+  let sbHills = '#4a8830', sbPlants = '#50c040';
+  let sbAnimFrame = null;
 
+  function resizeStartBg() {
+    startBgCanvas.width  = window.innerWidth;
+    startBgCanvas.height = window.innerHeight;
+  }
+  resizeStartBg();
+  window.addEventListener('resize', resizeStartBg);
+
+  function drawStartBg() {
+    if (!document.getElementById('start-screen') ||
+        document.getElementById('start-screen').style.display === 'none') return;
+
+    sbTime += 0.004;
+    const phase = getDayPhase(0);
+    const spd = 0.008;
+    const skyTarget = _sampleKeys(SKY_KEYS, phase);
+    sbSky0   = lerpHex(sbSky0,   skyTarget[0], spd);
+    sbSky1   = lerpHex(sbSky1,   skyTarget[1], spd);
+    sbHills  = lerpHex(sbHills,  _sampleKeys(HILL_KEYS,  phase), spd);
+    sbPlants = lerpHex(sbPlants, _sampleKeys(PLANT_KEYS, phase), spd);
+
+    // Body-Hintergrund synchron halten
+    document.body.style.background =
+      `linear-gradient(180deg, ${sbSky0} 0%, ${sbSky1} 100%)`;
+
+    const W = startBgCanvas.width, H = startBgCanvas.height;
+    sbCtx.clearRect(0, 0, W, H);
+
+    // Himmel-Gradient
+    const grad = sbCtx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0,    sbSky0);
+    grad.addColorStop(0.75, sbSky1);
+    grad.addColorStop(1,    sbSky1);
+    sbCtx.fillStyle = grad;
+    sbCtx.fillRect(0, 0, W, H);
+
+    // Wolken (nur tagsüber) – kleine, abwechslungsreiche Wolken
+    if (phase > 0.35 && phase < 0.65) {
+      const ca = Math.min(1, Math.min(phase - 0.35, 0.65 - phase) * 12) * 0.5;
+      if (ca > 0.01) {
+        // Wolken-Definitionen: [xOff, yFrac, r in px, speed]
+        const sbClouds = [
+          { xOff: 0,   yFrac: 0.05, r: 18, spd: 1.0, puffs: [[0,0,1],[14,-5,0.72],[28,0,0.55]] },
+          { xOff: 180, yFrac: 0.10, r: 12, spd: 1.5, puffs: [[0,0,1],[10,-4,0.68],[20,1,0.50]] },
+          { xOff: 340, yFrac: 0.06, r: 22, spd: 0.7, puffs: [[0,0,1],[18,-6,0.80],[36,0,0.60],[28,-2,0.45]] },
+          { xOff: 80,  yFrac: 0.14, r: 10, spd: 1.8, puffs: [[0,0,1],[8,-3,0.65],[16,0,0.48]] },
+          { xOff: 260, yFrac: 0.08, r: 15, spd: 1.1, puffs: [[0,0,1],[12,-5,0.75],[25,1,0.55],[-8,2,0.40]] },
+          { xOff: 430, yFrac: 0.12, r: 9,  spd: 2.0, puffs: [[0,0,1],[7,-3,0.62],[14,0,0.45]] },
+        ];
+        sbCtx.fillStyle = `rgba(255,255,255,${ca})`;
+        for (const c of sbClouds) {
+          const totalW = W + 200;
+          const cx = ((c.xOff + sbTime * c.spd * 14) % totalW) - 60;
+          const cy = c.yFrac * H;
+          sbCtx.beginPath();
+          for (const [dx, dy, rs] of c.puffs) {
+            sbCtx.moveTo(cx + dx + rs * c.r, cy + dy);
+            sbCtx.arc(cx + dx, cy + dy, Math.max(0.1, rs * c.r), 0, Math.PI * 2);
+          }
+          sbCtx.fill();
+        }
+      }
+    }
+
+    // Sterne (nachts)
+    if (phase < 0.30 || phase > 0.75) {
+      const starA = phase < 0.30
+        ? Math.min(1, (0.30 - phase) * 8)
+        : Math.min(1, (phase - 0.75) * 8);
+      sbCtx.fillStyle = `rgba(255,255,255,${starA * 0.8})`;
+      for (let i = 0; i < 40; i++) {
+        const sx = ((i * 137.5) % 1) * W;
+        const sy = ((i * 97.3)  % 1) * H * 0.55;
+        const sr = 0.5 + (i % 3) * 0.5;
+        sbCtx.beginPath();
+        sbCtx.arc(sx, sy, sr, 0, Math.PI * 2);
+        sbCtx.fill();
+      }
+    }
+
+    // Hügel hinten
+    sbCtx.save();
+    sbCtx.globalAlpha = 0.92;
+    sbCtx.fillStyle = sbHills;
+    sbCtx.beginPath();
+    sbCtx.moveTo(0, H);
+    const hh = H * 0.22;
+    for (let x = 0; x <= W; x += 4) {
+      const y = H - hh
+        + Math.sin(x * 0.017 + sbTime * 0.65) * H * 0.022
+        + Math.sin(x * 0.007 + sbTime * 0.26) * H * 0.012;
+      sbCtx.lineTo(x, y);
+    }
+    sbCtx.lineTo(W, H);
+    sbCtx.closePath();
+    sbCtx.fill();
+    sbCtx.restore();
+
+    // Hügel vorne
+    sbCtx.save();
+    sbCtx.fillStyle = sbPlants;
+    sbCtx.beginPath();
+    sbCtx.moveTo(0, H);
+    const ph2 = H * 0.14;
+    for (let x = 0; x <= W; x += 4) {
+      const y = H - ph2
+        + Math.sin(x * 0.015 + sbTime * 1.15) * H * 0.018
+        + Math.sin(x * 0.009 + sbTime * 0.40) * H * 0.010;
+      sbCtx.lineTo(x, y);
+    }
+    sbCtx.lineTo(W, H);
+    sbCtx.closePath();
+    sbCtx.fill();
+    sbCtx.restore();
+
+    // Dunkler Vignette-Overlay für bessere Text-Lesbarkeit
+    const vig = sbCtx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.85);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.45)');
+    sbCtx.fillStyle = vig;
+    sbCtx.fillRect(0, 0, W, H);
+
+    sbAnimFrame = requestAnimationFrame(drawStartBg);
+  }
+  sbAnimFrame = requestAnimationFrame(drawStartBg);
+
+  // Stoppe Animation wenn Spiel startet
+  const _origStart = startGameAfterUserTap;
+  window._stopStartBg = () => {
+    if (sbAnimFrame) { cancelAnimationFrame(sbAnimFrame); sbAnimFrame = null; }
+  };
   buildCatGrid('start-cat-grid', key => {
     activeCategory = key;
     ANIMALS.length = 0;
     getAnimalsForCategory(key).forEach(a => ANIMALS.push(a));
     refreshCatGrids();
-    const icon = document.querySelector('#start-screen > div:first-child');
+    const icon = document.getElementById('start-icon');
     if (icon) icon.textContent = EMOJI_CATEGORIES[key].emojis[EMOJI_CATEGORIES[key].emojis.length - 1];
   });
 
