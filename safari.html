@@ -1909,19 +1909,20 @@ class BallManager {
   // Gibt zurueck: 'clear' | 'warning' | 'gameover'
   checkDangerState() {
     const now = Date.now();
-    // Nach einem Merge: grosszuegige Gnadenfrist
-    if (this._lastMergeTime && now - this._lastMergeTime < 2000) return 'clear';
+    // Nach einem Merge: kurze Gnadenfrist damit neu entstandener Ball fallen kann
+    if (this._lastMergeTime && now - this._lastMergeTime < 600) return 'clear';
 
     let dangerBall = false;
     for (const b of this.balls) {
       if (!b.body) continue;
-      // Frisch gespawnte Baelle ignorieren (3 s)
-      if (now - b.body._spawnTime < 3000) continue;
+      // Frisch gespawnte Bälle ignorieren
+      if (now - b.body._spawnTime < 800) continue;
       const ballRadius = ANIMALS[b.body._type].r;
       const ballTop    = b.body.position.y - ballRadius;
       const vel        = Math.hypot(b.body.velocity.x, b.body.velocity.y);
-      // Ball deutlich ueber der Linie und nahezu still
-      if (ballTop < GAME_OVER_LINE - 4 && vel < 0.6) {
+      // Nur Bälle zählen die (a) über der Linie sind UND (b) nahezu zur Ruhe gekommen sind
+      // → verhindert False-Positives beim Fallen, zählt aber ruhende Stapel korrekt
+      if (ballTop < GAME_OVER_LINE && vel < 1.5) {
         dangerBall = true;
         break;
       }
@@ -1935,8 +1936,7 @@ class BallManager {
     if (!this._dangerSince) this._dangerSince = now;
     const elapsed = now - this._dangerSince;
 
-    // 4 Sekunden Countdown bevor echtes Game Over
-    if (elapsed < 4000) return 'warning';
+    if (elapsed < 3000) return 'warning';
     return 'gameover';
   }
 
