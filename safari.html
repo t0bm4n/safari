@@ -38,6 +38,15 @@
     position: relative;
   }
 
+  #game-bg-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
 
   #game-wrapper {
     width: 100vw;
@@ -49,6 +58,8 @@
     justify-content: center;
     gap: min(2vw, 10px);
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    position: relative;
+    z-index: 1;
   }
 
   #hud {
@@ -141,13 +152,27 @@
     height: 100% !important;
     border-radius: min(3.8vw, 16px);
     display: block;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
     touch-action: none;
-    border: 2px solid rgba(255,255,255,0.15);
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     -webkit-font-smoothing: antialiased;
   }
+
+#phaser-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+
+  border: 2px solid rgba(255, 255, 255, 0.35);
+
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.25),
+    inset 0 0 8px rgba(255, 255, 255, 0.15);
+
+  pointer-events: none;
+}
+
 
   #menu-overlay {
     display: none;
@@ -382,6 +407,12 @@
 <canvas id="start-bg-canvas" style="
   position:fixed; inset:0; width:100%; height:100%;
   z-index:999; pointer-events:none;
+"></canvas>
+
+<!-- Persistenter Hintergrund-Canvas für das Spiel (hinter allem) -->
+<canvas id="game-bg-canvas" style="
+  position:fixed; inset:0; width:100%; height:100%;
+  z-index:0; pointer-events:none; display:none;
 "></canvas>
 
 <div id="start-screen" style="
@@ -1429,16 +1460,166 @@ let _bgBodyColor = '#141c50';
 let _bgLerpSky0  = '#0b1035';
 let _bgLerpSky1  = '#141c50';
 
+// ── Spiel-Hintergrund-Canvas (hinter dem Spielfeld) ──────────────────────────
+let _gbcCtx     = null;
+let _gbcTime    = 0;
+let _gbcHills   = '#4a8830';
+let _gbcPlants  = '#50c040';
+let _gbcRunning = false;
+let _gbcFrame   = null;
+
+function _getGbcCtx() {
+  if (_gbcCtx) return _gbcCtx;
+  const c = document.getElementById('game-bg-canvas');
+  if (!c) return null;
+  _gbcCtx = c.getContext('2d');
+  return _gbcCtx;
+}
+
+function _resizeGbc() {
+  const c = document.getElementById('game-bg-canvas');
+  if (!c) return;
+  c.width  = window.innerWidth;
+  c.height = window.innerHeight;
+  _gbcCtx  = null; // reset so context is re-fetched
+}
+
+function _drawGbc() {
+  if (!_gbcRunning) return;
+  const c = document.getElementById('game-bg-canvas');
+  if (!c) return;
+  const ctx = _getGbcCtx();
+  if (!ctx) return;
+  const W2 = c.width, H2 = c.height;
+
+  _gbcTime += 0.004;
+
+  // Sync hill/plant colors with game field
+  _gbcHills  = _bgLerpSky0; // will use separate lerp below
+  _gbcPlants = _bgLerpSky1;
+
+  ctx.clearRect(0, 0, W2, H2);
+
+  // Sky gradient – identical to game field
+  const grad = ctx.createLinearGradient(0, 0, 0, H2);
+  grad.addColorStop(0,    _bgLerpSky0);
+  grad.addColorStop(0.75, _bgLerpSky1);
+  grad.addColorStop(1,    _bgLerpSky1);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W2, H2);
+
+  // Stars (night)
+  const phase = _gbcLastPhase || 0.5;
+  if (phase < 0.30 || phase > 0.75) {
+    const starA = phase < 0.30
+      ? Math.min(1, (0.30 - phase) * 8)
+      : Math.min(1, (phase - 0.75) * 8);
+    ctx.fillStyle = `rgba(255,255,255,${starA * 0.8})`;
+    for (let i = 0; i < 60; i++) {
+      const sx = ((i * 137.5) % 1) * W2;
+      const sy = ((i * 97.3)  % 1) * H2 * 0.55;
+      const sr = 0.5 + (i % 3) * 0.5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Clouds (day)
+  if (phase > 0.35 && phase < 0.65) {
+    const ca = Math.min(1, Math.min(phase - 0.35, 0.65 - phase) * 12) * 0.45;
+    if (ca > 0.01) {
+      const clouds = [
+        { xOff: 0,   yFrac: 0.04, r: 22, spd: 1.0, puffs: [[0,0,1],[14,-5,0.72],[28,0,0.55]] },
+        { xOff: 220, yFrac: 0.09, r: 16, spd: 0.7, puffs: [[0,0,1],[12,-4,0.8],[24,0,0.6],[-6,3,0.45]] },
+        { xOff: 420, yFrac: 0.05, r: 12, spd: 1.4, puffs: [[0,0,1],[9,-3,0.7],[18,0,0.5]] },
+        { xOff: 620, yFrac: 0.12, r: 19, spd: 0.9, puffs: [[0,0,1],[15,-5,0.75],[30,2,0.6],[22,-2,0.42]] },
+        { xOff: 820, yFrac: 0.03, r: 14, spd: 1.2, puffs: [[0,0,1],[11,-4,0.68],[22,1,0.50]] },
+        { xOff: 140, yFrac: 0.14, r: 10, spd: 1.6, puffs: [[0,0,1],[8,-3,0.65],[16,0,0.48]] },
+      ];
+      ctx.fillStyle = `rgba(255,255,255,${ca})`;
+      for (const cl of clouds) {
+        const totalW = W2 + 300;
+        const cx2 = ((cl.xOff + _gbcTime * cl.spd * 20) % totalW) - 80;
+        const cy2 = cl.yFrac * H2;
+        ctx.beginPath();
+        for (const [dx, dy, rs] of cl.puffs) {
+          const r = cl.r * (W2 / 420);
+          ctx.moveTo(cx2 + dx * (W2/420) + rs * r, cy2 + dy * (H2/580));
+          ctx.arc(cx2 + dx * (W2/420), cy2 + dy * (H2/580), Math.max(0.1, rs * r), 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+  }
+
+  // Hills back
+  const hillColor = _gbcLerpHills  || '#4a8830';
+  ctx.save();
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = hillColor;
+  ctx.beginPath();
+  ctx.moveTo(0, H2);
+  const hh = H2 * 0.22;
+  for (let x = 0; x <= W2; x += 4) {
+    const y = H2 - hh
+      + Math.sin(x * 0.013 + _gbcTime * 0.65) * H2 * 0.022
+      + Math.sin(x * 0.005 + _gbcTime * 0.26) * H2 * 0.012;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W2, H2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Hills front
+  const plantColor = _gbcLerpPlants || '#50c040';
+  ctx.save();
+  ctx.fillStyle = plantColor;
+  ctx.beginPath();
+  ctx.moveTo(0, H2);
+  const ph2h = H2 * 0.14;
+  for (let x = 0; x <= W2; x += 4) {
+    const y = H2 - ph2h
+      + Math.sin(x * 0.015 + _gbcTime * 1.15) * H2 * 0.018
+      + Math.sin(x * 0.009 + _gbcTime * 0.40) * H2 * 0.010;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W2, H2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  _gbcFrame = requestAnimationFrame(_drawGbc);
+}
+
+let _gbcLastPhase  = 0.5;
+let _gbcLerpHills  = '#4a8830';
+let _gbcLerpPlants = '#50c040';
+
+function startGameBgCanvas() {
+  const c = document.getElementById('game-bg-canvas');
+  if (!c) return;
+  c.style.display = 'block';
+  _resizeGbc();
+  window.addEventListener('resize', _resizeGbc);
+  _gbcRunning = true;
+  if (_gbcFrame) cancelAnimationFrame(_gbcFrame);
+  _gbcFrame = requestAnimationFrame(_drawGbc);
+}
+
 // Wird jeden Frame aus Background.draw() aufgerufen
 function tickBodyBackground(score, speed) {
   const phase = getDayPhase(score);
+  _gbcLastPhase = phase;
   const sky = _sampleKeys(SKY_KEYS, phase);
   _bgLerpSky0 = lerpHex(_bgLerpSky0, sky[0], speed);
   _bgLerpSky1 = lerpHex(_bgLerpSky1, sky[1], speed);
+  _gbcLerpHills  = lerpHex(_gbcLerpHills,  _sampleKeys(HILL_KEYS,  phase), speed);
+  _gbcLerpPlants = lerpHex(_gbcLerpPlants, _sampleKeys(PLANT_KEYS, phase), speed);
   _bgBodyColor = _bgLerpSky1;
-  // Body = gleicher Verlauf wie Spielfeld-Himmel → nahtloser Übergang
-  document.body.style.background =
-    `linear-gradient(180deg, ${_bgLerpSky0} 0%, ${_bgLerpSky1} 100%)`;
+  // Body transparent – game-bg-canvas übernimmt den Hintergrund
+  document.body.style.background = 'transparent';
 }
 
 // Einmalig beim Start / Reset aufrufen
@@ -1447,9 +1628,11 @@ function updateDynamicBackground(score) {
   const sky = _sampleKeys(SKY_KEYS, phase);
   _bgLerpSky0  = sky[0];
   _bgLerpSky1  = sky[1];
+  _gbcLerpHills  = _sampleKeys(HILL_KEYS,  phase);
+  _gbcLerpPlants = _sampleKeys(PLANT_KEYS, phase);
+  _gbcLastPhase  = phase;
   _bgBodyColor = sky[1];
-  document.body.style.background =
-    `linear-gradient(180deg, ${sky[0]} 0%, ${sky[1]} 100%)`;
+  document.body.style.background = 'transparent';
 }
 
 // ========================================
@@ -1636,12 +1819,6 @@ buildMusicTrackGrid();
 class Background {
   constructor(scene) {
     this._scene  = scene;
-    this.off     = document.createElement('canvas');
-    this.off.width  = W;
-    this.off.height = H;
-    this.ctx     = this.off.getContext('2d');
-    this.tex     = scene.textures.createCanvas('bg', W, H);
-    this.img     = scene.add.image(0, 0, 'bg').setOrigin(0, 0).setDepth(-10);
     this.time    = 0;
     this._frame  = 0;
     // Interpolierte Himmelsfarben – starten beim aktuellen Tageszyklus
@@ -1651,8 +1828,8 @@ class Background {
     this.sky1    = initSky[1];
     this.hills   = _sampleKeys(HILL_KEYS,  initPhase);
     this.plants  = _sampleKeys(PLANT_KEYS, initPhase);
-    // Phaser-Kamera sofort auf Himmelfarbe setzen → kein schwarzer Blitz beim Start
-    scene.cameras.main.setBackgroundColor(this.sky0);
+    // Kamera vollständig transparent
+    scene.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
   }
 
   draw(score, delta) {
@@ -1670,34 +1847,12 @@ class Background {
     this.plants = lerpHex(this.plants, _sampleKeys(PLANT_KEYS, phase), spd);
     tickBodyBackground(score, spd);
 
-    // Phaser-Kamera-Hintergrund = obere Himmelsfarbe → kein transparenter Rand
-    if (this._frame % 4 === 0 && this._scene) {
-      this._scene.cameras.main.setBackgroundColor(this.sky0);
+    // Spielfeld-Canvas ist transparent – game-bg-canvas zeichnet den Hintergrund
+    // Kamera-Hintergrund transparent lassen
+    // Kamera-Hintergrund jedes Frame auf transparent halten
+    if (this._scene && this._scene.cameras && this._scene.cameras.main) {
+      this._scene.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
     }
-
-    if (this._frame % 2 !== 0) return;
-
-    const ctx = this.ctx;
-    ctx.clearRect(0, 0, W, H);
-
-    // Himmelsverlauf – volle Höhe damit kein transparenter Streifen entsteht
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, this.sky0);
-    grad.addColorStop(0.75, this.sky1);
-    grad.addColorStop(1, this.sky1);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-
-    // Wolken – nur tagsüber sichtbar (phase 0.35..0.65)
-    if (phase > 0.35 && phase < 0.65) {
-      const ca = Math.min(1, Math.min(phase - 0.35, 0.65 - phase) * 12) * 0.45;
-      if (ca > 0.01) this._drawClouds(ctx, this.time, `rgba(255,255,255,${ca})`);
-    }
-
-    this._hill(ctx, 125 * SCALE_FACTOR, 0.65, this.hills,  0.92);
-    this._hill(ctx, 82  * SCALE_FACTOR, 1.15, this.plants, 1.0);
-    this.tex.getContext().drawImage(this.off, 0, 0);
-    this.tex.refresh();
   }
 
   _drawClouds(ctx, t, color) {
@@ -2528,6 +2683,8 @@ function startGameAfterUserTap() {
   } catch (e) { console.warn(e); }
 
   document.getElementById('start-screen').style.display = 'none';
+  // Spiel-Hintergrund-Canvas starten
+  startGameBgCanvas();
   // game-wrapper erst nach dem Laden zeigen
   const ls = document.getElementById('loading-screen');
   // Aktives Kategorie-Emoji im Ladebildschirm zeigen
@@ -2544,8 +2701,8 @@ function startGameAfterUserTap() {
     resolution:      Math.min(window.devicePixelRatio || 1, 2), // max 2x – spart GPU
     pixelArt:        false,
     roundPixels:     true,            // verhindert Sub-Pixel-Zittern
-    backgroundColor: '#141c50',
-    transparent:     false,
+    backgroundColor: 0x00000000,
+    transparent:     true,
     parent:          'phaser-container',
     fps: {
       target: 60,
@@ -2565,6 +2722,17 @@ function startGameAfterUserTap() {
     },
     scene: [GameScene],
   });
+
+  // Phaser-Canvas nach Init explizit transparent machen
+  setTimeout(() => {
+    const phaserCanvas = document.querySelector('#phaser-container canvas');
+    if (phaserCanvas) {
+      phaserCanvas.style.background = 'transparent';
+      // Kontext mit alpha:true neu holen falls nötig
+      const ctx2d = phaserCanvas.getContext('2d', { alpha: true });
+      if (ctx2d) ctx2d.clearRect(0, 0, phaserCanvas.width, phaserCanvas.height);
+    }
+  }, 100);
 }
 
 // ========================================
@@ -2602,9 +2770,11 @@ window.addEventListener('DOMContentLoaded', () => {
     sbHills  = lerpHex(sbHills,  _sampleKeys(HILL_KEYS,  phase), spd);
     sbPlants = lerpHex(sbPlants, _sampleKeys(PLANT_KEYS, phase), spd);
 
-    // Body-Hintergrund synchron halten
-    document.body.style.background =
-      `linear-gradient(180deg, ${sbSky0} 0%, ${sbSky1} 100%)`;
+    // Body-Hintergrund synchron halten (nur wenn Spiel noch nicht gestartet)
+    if (!gameStarted) {
+      document.body.style.background =
+        `linear-gradient(180deg, ${sbSky0} 0%, ${sbSky1} 100%)`;
+    }
 
     const W = startBgCanvas.width, H = startBgCanvas.height;
     sbCtx.clearRect(0, 0, W, H);
