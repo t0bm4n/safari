@@ -2,466 +2,87 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d1117">
 <title>Tier-Merge Safari</title>
 <style>
-  * { 
-    margin: 0; 
-    padding: 0; 
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;height:100%;position:fixed;overflow:hidden;touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  body{background:#0b1035;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center}
 
-  html, body {
-    width: 100%;
-    height: 100%;
-    position: fixed;
-    overflow: hidden;
-    touch-action: none;
-    overscroll-behavior: none;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
+  #game-bg-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:999;pointer-events:none}
 
-  body {
-    background: #0b1035;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
+  #game-wrapper{width:100vw;height:100vh;max-width:480px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:min(2vw,10px);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);position:relative;z-index:1}
 
-  #game-bg-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
-  }
+  #hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:min(calc(100vw - 20px),420px);padding:min(2vw,8px) min(3.3vw,14px);background:rgba(255,255,255,.07);border-radius:min(3.3vw,14px);border:1px solid rgba(255,255,255,.1);color:#fff;backdrop-filter:blur(10px)}
+  #next-box{display:flex;flex-direction:row;align-items:center;gap:min(2vw,8px)}
+  #preview-canvas{width:min(11.4vw,48px);height:min(11.4vw,48px)}
+  #next-label{font-size:min(2.4vw,10px);opacity:.5;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+  #score-box{display:flex;flex-direction:column;align-items:flex-end}
+  #score-label{font-size:min(2.4vw,10px);opacity:.5;text-transform:uppercase;letter-spacing:1px}
+  #score-val{color:#ffd700;font-size:min(4.8vw,20px);font-weight:700;line-height:1}
+  #gear-btn{width:min(8.1vw,34px);height:min(8.1vw,34px);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:50%;cursor:pointer;font-size:min(4vw,17px);transition:all .18s;justify-self:center;touch-action:manipulation}
+  #gear-btn:active{background:rgba(255,255,255,.18);transform:scale(.95) rotate(30deg)}
 
+  #phaser-container{position:relative;width:min(calc(100vw - 20px),420px);aspect-ratio:420/580}
+  #phaser-container canvas{width:100%!important;height:100%!important;border-radius:min(3.8vw,16px);display:block;touch-action:none}
+  #phaser-container::after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid rgba(255,255,255,.35);box-shadow:0 0 12px rgba(255,255,255,.25),inset 0 0 8px rgba(255,255,255,.15);pointer-events:none}
 
-  #game-wrapper {
-    width: 100vw;
-    height: 100vh;
-    max-width: 480px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: min(2vw, 10px);
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    position: relative;
-    z-index: 1;
-  }
+  #menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:100;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  #menu-overlay.open{display:flex}
+  #menu-panel{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.14);border-radius:min(4.3vw,18px);padding:min(6.7vw,28px) min(7.6vw,32px);display:flex;flex-direction:column;gap:min(3.3vw,14px);min-width:min(80vw,320px);color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:slideUp .3s ease}
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:none}}
+  #menu-panel h2{font-size:min(3.8vw,16px);font-weight:600;opacity:.6;text-align:center;letter-spacing:1px;text-transform:uppercase;margin-bottom:min(1vw,4px)}
+  .menu-btn{padding:min(2.6vw,11px) min(4.8vw,20px);border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:#fff;border-radius:min(2.4vw,10px);cursor:pointer;font-size:min(3.6vw,15px);transition:all .16s;text-align:left;display:flex;align-items:center;gap:min(2.4vw,10px);touch-action:manipulation;min-height:44px}
+  .menu-btn:active{background:rgba(255,255,255,.15);transform:scale(.98)}
+  .cat-section-label{font-size:min(2.6vw,11px);opacity:.45;text-transform:uppercase;letter-spacing:1px;margin-bottom:-4px}
+  .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:min(1.4vw,6px)}
+  .cat-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:min(1.9vw,8px) min(1vw,4px);border-radius:min(2vw,8px);border:1.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);cursor:pointer;transition:all .15s;touch-action:manipulation;min-height:54px}
+  .cat-btn.active{border-color:rgba(255,220,80,.8);background:rgba(255,220,80,.14);box-shadow:0 0 10px rgba(255,220,80,.2)}
+  .cat-btn:active{transform:scale(.94)}
+  .cat-btn .cat-icon{font-size:min(5.7vw,22px);line-height:1}
+  .cat-btn .cat-label{font-size:min(2vw,8px);opacity:.65;text-align:center;line-height:1.1;color:#fff}
+  .cat-btn.active .cat-label{opacity:1;color:#ffd700}
 
-  #hud {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    width: min(100vw - 20px, 420px);
-    padding: min(2vw, 8px) min(3.3vw, 14px);
-    background: rgba(255,255,255,0.07);
-    border-radius: min(3.3vw, 14px);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #fff;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
+  #merge-bar{width:min(calc(100vw - 20px),420px);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:min(3.3vw,14px);padding:min(1.9vw,8px) min(2.4vw,10px);display:flex;align-items:center;justify-content:space-between;gap:min(.7vw,3px);backdrop-filter:blur(10px)}
+  .merge-cell{flex:1;display:flex;flex-direction:column;align-items:center;gap:min(.7vw,3px);position:relative;transition:transform .2s}
+  .merge-cell canvas{border-radius:50%;transition:box-shadow .15s,transform .3s;display:block;width:100%;height:auto}
+  .merge-cell.just-merged canvas{transform:scale(1.18)}
+  .merge-arrow{position:absolute;right:-3px;top:50%;transform:translateY(-50%);font-size:min(1.9vw,8px);color:rgba(255,255,255,.25);z-index:1;pointer-events:none}
+  .merge-cell:last-child .merge-arrow{display:none}
 
-  #next-box {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: min(2vw, 8px);
-    justify-content: flex-start;
-  }
-
-  #preview-canvas {
-    width: min(11.4vw, 48px);
-    height: min(11.4vw, 48px);
-  }
-
-  #next-label { 
-    font-size: min(2.4vw, 10px); 
-    opacity: 0.5; 
-    text-transform: uppercase; 
-    letter-spacing: 1px; 
-    white-space: nowrap;
-  }
-
-  #score-box {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: flex-end;
-  }
-
-  #score-label { 
-    font-size: min(2.4vw, 10px); 
-    opacity: 0.5; 
-    text-transform: uppercase; 
-    letter-spacing: 1px; 
-  }
-
-  #score-val { 
-    color: #ffd700; 
-    font-size: min(4.8vw, 20px); 
-    font-weight: 700; 
-    line-height: 1; 
-  }
-
-  #gear-btn {
-    width: min(8.1vw, 34px);
-    height: min(8.1vw, 34px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: min(4vw, 17px);
-    transition: all 0.18s;
-    user-select: none;
-    justify-self: center;
-    touch-action: manipulation;
-  }
-
-  #gear-btn:active { 
-    background: rgba(255,255,255,0.18); 
-    transform: scale(0.95) rotate(30deg); 
-  }
-
-  #phaser-container {
-    position: relative;
-    width: min(100vw - 20px, 420px);
-    height: auto;
-    aspect-ratio: 420 / 580;
-  }
-
-  #phaser-container canvas {
-    width: 100% !important;
-    height: 100% !important;
-    border-radius: min(3.8vw, 16px);
-    display: block;
-    touch-action: none;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    -webkit-font-smoothing: antialiased;
-  }
-
-#phaser-container::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-
-  border: 2px solid rgba(255, 255, 255, 0.35);
-
-  box-shadow:
-    0 0 12px rgba(255, 255, 255, 0.25),
-    inset 0 0 8px rgba(255, 255, 255, 0.15);
-
-  pointer-events: none;
-}
-
-
-  #menu-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  #menu-overlay.open { display: flex; }
-
-  #menu-panel {
-    background: rgba(13, 17, 23, 0.98);
-    border: 1px solid rgba(255,255,255,0.14);
-    border-radius: min(4.3vw, 18px);
-    padding: min(6.7vw, 28px) min(7.6vw, 32px);
-    display: flex;
-    flex-direction: column;
-    gap: min(3.3vw, 14px);
-    min-width: min(80vw, 320px);
-    color: #fff;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    animation: slideUp 0.3s ease;
-  }
-
-  @keyframes slideUp {
-    from { 
-      opacity: 0;
-      transform: translateY(20px) scale(0.95);
-    }
-    to { 
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  #menu-panel h2 {
-    font-size: min(3.8vw, 16px);
-    font-weight: 600;
-    opacity: 0.6;
-    text-align: center;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: min(1vw, 4px);
-  }
-
-  .menu-btn {
-    padding: min(2.6vw, 11px) min(4.8vw, 20px);
-    border: 1px solid rgba(255,255,255,0.16);
-    background: rgba(255,255,255,0.07);
-    color: #fff;
-    border-radius: min(2.4vw, 10px);
-    cursor: pointer;
-    font-size: min(3.6vw, 15px);
-    transition: all 0.16s;
-    text-align: left;
-    display: flex;
-    align-items: center;
-    gap: min(2.4vw, 10px);
-    touch-action: manipulation;
-    min-height: 44px;
-  }
-
-  .menu-btn:active { 
-    background: rgba(255,255,255,0.15); 
-    transform: scale(0.98);
-  }
-
-
-
-  .cat-section-label {
-    font-size: min(2.6vw, 11px);
-    opacity: 0.45;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: -4px;
-  }
-
-  .cat-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: min(1.4vw, 6px);
-  }
-
-  .cat-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    padding: min(1.9vw, 8px) min(1vw, 4px);
-    border-radius: min(2vw, 8px);
-    border: 1.5px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.06);
-    cursor: pointer;
-    transition: all 0.15s;
-    touch-action: manipulation;
-    min-height: 54px;
-  }
-
-  .cat-btn.active {
-    border-color: rgba(255,220,80,0.8);
-    background: rgba(255,220,80,0.14);
-    box-shadow: 0 0 10px rgba(255,220,80,0.2);
-  }
-
-  .cat-btn:active { transform: scale(0.94); }
-
-  .cat-btn .cat-icon { font-size: min(5.7vw, 22px); line-height: 1; }
-
-  .cat-btn .cat-label {
-    font-size: min(2vw, 8px);
-    opacity: 0.65;
-    text-align: center;
-    line-height: 1.1;
-    color: #fff;
-  }
-
-  .cat-btn.active .cat-label { opacity: 1; color: #ffd700; }
-
-  #merge-bar {
-    width: min(100vw - 20px, 420px);
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: min(3.3vw, 14px);
-    padding: min(1.9vw, 8px) min(2.4vw, 10px);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: min(0.7vw, 3px);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
-  .merge-cell {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: min(0.7vw, 3px);
-    position: relative;
-    transition: transform 0.2s;
-  }
-
-  .merge-cell canvas {
-    border-radius: 50%;
-    transition: box-shadow 0.15s, transform 0.3s;
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .merge-cell.just-merged canvas {
-    transform: scale(1.18);
-    /* box-shadow wird per JS in der Tier-Farbe gesetzt, kein Override hier */
-  }
-
-  .merge-arrow {
-    position: absolute;
-    right: -3px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: min(1.9vw, 8px);
-    color: rgba(255,255,255,0.25);
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .merge-cell:last-child .merge-arrow { display: none; }
-
-  #loading-screen {
-    position: fixed;
-    inset: 0;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    transition: opacity 0.5s ease, visibility 0.5s ease;
-  }
-
-  #loading-screen.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  .loading-emoji {
-    font-size: min(15vw, 64px);
-    animation: bounce 1s infinite;
-  }
-
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-  }
-
-  .loading-text {
-    color: #fff;
-    font-size: min(4.3vw, 18px);
-    margin-top: min(4.8vw, 20px);
-    opacity: 0.7;
-  }
-
-  @media (max-width: 375px) {
-    #game-wrapper { gap: 8px; }
-  }
-
-  @media (min-width: 481px) {
-    #hud, #phaser-container, #merge-bar { width: 420px; }
-  }
-
-  @media (orientation: landscape) and (max-height: 500px) {
-    #game-wrapper { gap: 5px; }
-    #hud { padding: 6px 12px; }
-    #merge-bar { padding: 6px 8px; }
-  }
+  #start-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:2000;color:white;font-family:system-ui;text-align:center;gap:18px;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow-y:auto}
+  #loading-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:opacity .5s ease,visibility .5s ease}
+  #loading-screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+  .loading-emoji{font-size:min(15vw,64px);animation:bounce 1s infinite}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+  .loading-text{color:#fff;font-size:min(4.3vw,18px);margin-top:min(4.8vw,20px);opacity:.7}
 </style>
 </head>
 <body>
 
+<canvas id="game-bg-canvas"></canvas>
 
-<canvas id="start-bg-canvas" style="
-  position:fixed; inset:0; width:100%; height:100%;
-  z-index:999; pointer-events:none;
-"></canvas>
-
-<!-- Persistenter Hintergrund-Canvas für das Spiel (hinter allem) -->
-<canvas id="game-bg-canvas" style="
-  position:fixed; inset:0; width:100%; height:100%;
-  z-index:0; pointer-events:none; display:none;
-"></canvas>
-
-<div id="start-screen" style="
-  position:fixed;
-  inset:0;
-  background: transparent;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  z-index:2000;
-  color:white;
-  font-family:system-ui;
-  text-align:center;
-  gap: 18px;
-  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-">
-  <div id="start-icon" style="font-size:52px; line-height:1; transition: all 0.2s ease;">🐘</div>
-  <div style="font-size:22px; font-weight:700; letter-spacing:0.5px;">Tier-Merge Safari</div>
-
-  <div style="width:100%; max-width:340px;">
-    <div style="font-size:11px; opacity:0.45; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Wähle deine Kategorie</div>
-    <div id="start-cat-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:7px;"></div>
+<div id="start-screen">
+  <div id="start-icon" style="font-size:52px;line-height:1">🐘</div>
+  <div style="font-size:22px;font-weight:700;letter-spacing:.5px">Tier-Merge Safari</div>
+  <div style="width:100%;max-width:340px">
+    <div style="font-size:11px;opacity:.45;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Wähle deine Kategorie</div>
+    <div id="start-cat-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px"></div>
   </div>
-
-  <div id="start-btn" style="
-    margin-top:6px;
-    background: rgba(255,255,255,0.12);
-    border: 1.5px solid rgba(255,255,255,0.25);
-    border-radius: 14px;
-    padding: 13px 38px;
-    font-size: 17px;
-    font-weight: 600;
-    cursor: pointer;
-    letter-spacing: 0.3px;
-    touch-action: manipulation;
-  ">Tippe zum Starten ▶</div>
-
-  <div id="version-display" style="font-size:11px; opacity:0.35;"></div>
+  <div id="start-btn" style="margin-top:6px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);border-radius:14px;padding:13px 38px;font-size:17px;font-weight:600;cursor:pointer;touch-action:manipulation">Tippe zum Starten ▶</div>
+  <div id="version-display" style="font-size:11px;opacity:.35"></div>
 </div>
 
-<div id="loading-screen" style="display:none;">
+<div id="loading-screen">
   <div class="loading-emoji">🐘</div>
   <div class="loading-text">Lade Safari...</div>
 </div>
 
-<div id="game-wrapper" style="display:none;">
+<div id="game-wrapper" style="display:none">
   <div id="hud">
     <div id="next-box">
       <canvas id="preview-canvas" width="48" height="48"></canvas>
@@ -473,63 +94,48 @@
       <span id="score-val">0</span>
     </div>
   </div>
-
   <div id="phaser-container"></div>
-
   <div id="menu-overlay">
     <div id="menu-panel">
       <h2>Menü</h2>
       <button class="menu-btn" id="menu-restart">🔄&nbsp; Neu starten</button>
       <button class="menu-btn" id="menu-mute">🔊&nbsp; Sound an</button>
-
       <div class="cat-section-label">🎵 Musik-Lautstärke</div>
-      <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
-        <span style="font-size:13px;opacity:0.6;min-width:18px;">🔈</span>
-        <input type="range" id="slider-music" min="0" max="100" value="85"
-          style="flex:1;accent-color:#ffd700;height:4px;cursor:pointer;">
-        <span id="label-music" style="font-size:12px;opacity:0.6;min-width:30px;text-align:right;">85%</span>
+      <div style="display:flex;align-items:center;gap:10px;padding:2px 0">
+        <span style="font-size:13px;opacity:.6">🔈</span>
+        <input type="range" id="slider-music" min="0" max="100" value="85" style="flex:1;accent-color:#ffd700;height:4px;cursor:pointer">
+        <span id="label-music" style="font-size:12px;opacity:.6;min-width:30px;text-align:right">85%</span>
       </div>
-
       <div class="cat-section-label">🔔 Effekte-Lautstärke</div>
-      <div style="display:flex;align-items:center;gap:10px;padding:2px 0;">
-        <span style="font-size:13px;opacity:0.6;min-width:18px;">🔈</span>
-        <input type="range" id="slider-sfx" min="0" max="100" value="85"
-          style="flex:1;accent-color:#ffd700;height:4px;cursor:pointer;">
-        <span id="label-sfx" style="font-size:12px;opacity:0.6;min-width:30px;text-align:right;">85%</span>
+      <div style="display:flex;align-items:center;gap:10px;padding:2px 0">
+        <span style="font-size:13px;opacity:.6">🔈</span>
+        <input type="range" id="slider-sfx" min="0" max="100" value="85" style="flex:1;accent-color:#ffd700;height:4px;cursor:pointer">
+        <span id="label-sfx" style="font-size:12px;opacity:.6;min-width:30px;text-align:right">85%</span>
       </div>
-
       <div class="cat-section-label">🎶 Musik-Titel</div>
-      <div id="music-track-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
-
+      <div id="music-track-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"></div>
       <div class="cat-section-label">Emoji-Kategorie</div>
       <div id="menu-cat-grid" class="cat-grid"></div>
-      <button class="menu-btn" id="menu-close" style="justify-content:center; opacity:0.7;">✕&nbsp; Schließen</button>
+      <button class="menu-btn" id="menu-close" style="justify-content:center;opacity:.7">✕&nbsp; Schließen</button>
     </div>
   </div>
-
   <div id="merge-bar"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
-
 <script>
-// ========================================
-// VERSIONSNUMMER
-// ========================================
-const VERSION = "0.3.2";
-
-// ========================================
-// TIER-DROP-LIMIT
-// ========================================
+// ── Konstanten ───────────────────────────────────────────────────────────────
+const VERSION = '0.3.3';
 const MAX_DROP_ANIMAL_INDEX = 3;
+const DAY_CYCLE_SECONDS = 240;
 
-// ========================================
-// NINTENDO SUPER AUDIO ENGINE 🎮
-// ========================================
-let muted = false;
-let musicVolume = 0.85;   // 0..1
-let sfxVolume   = 0.85;   // 0..1
-let audioCtx = null;
+// ── Audio ────────────────────────────────────────────────────────────────────
+let muted = false, musicVolume = 0.85, sfxVolume = 0.85;
+let audioCtx = null, _seqRunning = false, _seqHandle = null;
+let _seqStep = 0, _seqSection = 0, _activeTrackKey = 'town_chill';
+let _masterGain = null, _crossfadeGain = null;
+let _currentStackRatio = 0;
+let _hihatBuf = null, _hihatBufCtx = null;
 
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -537,481 +143,159 @@ function getAudioCtx() {
   return audioCtx;
 }
 
-function _playBuffer(buffer, vol = 0.8) {
-  if (!buffer || muted) return;
-  try {
-    const ctx  = getAudioCtx();
-    const src  = ctx.createBufferSource();
-    const gain = ctx.createGain();
-    src.buffer       = buffer;
-    gain.gain.value  = vol * sfxVolume;
-    src.connect(gain);
-    gain.connect(ctx.destination);
-    src.start(0);
-  } catch (_) {}
-}
-
-// ─── Nintendo-Style Pulswellen-Oszillator ───────────────────────────────────
-// Erzeugt einen echten Rechteck-/Pulswellen-Sound wie ein Game-Boy
-function _createPulseOsc(ctx, freq, duty = 0.5) {
-  // Durch Überlagerung zweier Sägezahn-Wellen → Pulswelle
-  const real = new Float32Array(32);
-  const imag = new Float32Array(32);
-  for (let n = 1; n < 32; n++) {
-    // Rechteckwelle mit duty cycle: Fourier-Koeffizienten
-    imag[n] = (2 / (n * Math.PI)) * Math.sin(n * Math.PI * duty);
-  }
-  const wave = ctx.createPeriodicWave(real, imag, { disableNormalization: false });
-  const osc  = ctx.createOscillator();
-  osc.setPeriodicWave(wave);
-  osc.frequency.value = freq;
-  return osc;
-}
-
-// Einfacher Ton (mit optionalem Vibrato für Nintendo-Feel)
-function playTone(freq, type = 'square', duration = 0.2, vol = 0.15, endFreq = null, vibrato = false) {
-  if (muted) return;
-  try {
-    const ctx  = getAudioCtx();
-    let osc;
-    if (type === 'pulse25') {
-      osc = _createPulseOsc(ctx, freq, 0.25);
-    } else if (type === 'pulse50' || type === 'square') {
-      osc = _createPulseOsc(ctx, freq, 0.5);
-    } else {
-      osc = ctx.createOscillator();
-      osc.type = type;
-      osc.frequency.value = freq;
-    }
-
-    const gain = ctx.createGain();
-    const t    = ctx.currentTime;
-    const effectiveVol = vol * sfxVolume;
-
-    // Vibrato (Nintendo-typisch: leichtes Frequenz-Zittern)
-    if (vibrato) {
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = 6;
-      const lfoGain = ctx.createGain();
-      lfoGain.gain.value = freq * 0.012;
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc.frequency);
-      lfo.start(t);
-      lfo.stop(t + duration);
-    }
-
-    if (endFreq) {
-      osc.frequency.setValueAtTime(freq, t);
-      osc.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
-    }
-
-    // NES-typische Attack/Decay-Hüllkurve
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(effectiveVol, t + 0.012);
-    gain.gain.setValueAtTime(effectiveVol, t + duration * 0.4);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + duration + 0.05);
-  } catch (_) {}
-}
-
-// ─── Hintergrundmusik: Loop-Datei ODER Synth-Sequencer ──────────────────────
-
-let _seqRunning  = false;
-let _seqHandle   = null;
-let _seqStep     = 0;
-let _seqBiome    = 0;
-let _seqFadingTo = -1;      // Biome-Index während Crossfade
-let _masterGain  = null;    // Master-Gain für Fade
-
-// ── Tonleitern je Biome ──────────────────────────────────────────────────────
-// C-Dur Pentatonik: C D E G A  (entspannt, hell)
-// C-Moll natürlich: C D Eb F G Ab Bb
-// Dorisch:          C D Eb F G A Bb
-// Phrygisch:        E F G A B C D
-// Lydisch:          C D E F# G A B
-
-// ── Drei wählbare Musiktitel ────────────────────────────────────────────────
-// Jeder Track hat 4 Sections (A B C D) die rotieren → mehr Abwechslung
-// Noten in Hz. null = Pause. drums: 1=Kick, 2=Hihat, 3=Snare, 4=beide
-const MUSIC_TRACKS = {
-  town_chill: {
-    label: 'Town Chill',
-    icon:  '🏘️',
-    // Laid-back Jazz-Lofi Feeling – C-Dur / A-Moll, synkopiert, warm
-    sections: [
-      { // A: Ruhige Intro-Melodie
-        tempo: 560,
-        mel:  [392,null,440,null,392,330,null,294, 330,null,294,262,null,294,null,330],
-        mel2: [null,247,null,247,null,null,196,null, null,196,null,null,175,null,196,null],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [131,null,null,165,null,131,null,null,  110,null,null,131,null,110,null,null],
-        drums:[1,0,0,2, 0,1,0,2, 1,0,0,2, 0,1,0,2],
-      },
-      { // B: Gegenmelodie
-        tempo: 560,
-        mel:  [330,null,294,330,null,392,null,440, 392,null,330,null,294,null,330,null],
-        mel2: [null,196,null,null,247,null,247,null, null,247,null,196,null,196,null,247],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [98, null,null,110,null,null,131,null,  110,null,null,98,null,null,110,null],
-        drums:[1,0,0,2, 1,0,1,2, 0,0,1,2, 1,0,0,2],
-      },
-      { // C: Höhepunkt – Akkordmelodie
-        tempo: 540,
-        mel:  [523,null,494,null,440,null,392,null, 440,494,523,null,587,null,523,null],
-        mel2: [null,330,null,311,null,262,null,247, null,null,null,330,null,370,null,330],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [131,null,165,null,131,null,110,null,  131,null,131,null,165,null,131,null],
-        drums:[1,0,1,2, 0,0,1,2, 1,0,1,2, 0,1,0,2],
-      },
-      { // D: Ruhiger Ausklang, spärlich
-        tempo: 600,
-        mel:  [262,null,null,294,null,null,330,null, null,294,null,null,262,null,null,null],
-        mel2: [null,null,196,null,null,175,null,null, 196,null,null,175,null,null,165,null],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [98, null,null,null,131,null,null,null,  98,null,null,null,110,null,null,null],
-        drums:[1,0,0,0, 2,0,0,0, 1,0,0,2, 0,0,0,0],
-      },
-    ],
-  },
-
-  power: {
-    label: 'Power',
-    icon:  '⚡',
-    // SNES-Bosskampf – E-Moll, eingängiges Riff, klare Struktur, echter Drive
-    // Inspiration: Mega Man, Castlevania, Contra
-    sections: [
-      { // A: Das Haupt-Riff – unvergesslich, klar, treibend (E-Moll Pentatonik)
-        tempo: 250,
-        //          E    -    E    G    -    A    G    E     B    -    A    -    G    E    -    D
-        mel:  [330,null,330,392,null,440,392,330, 494,null,440,null,392,330,null,294],
-        mel2: [null,220,null,null,247,null,null,null, null,311,null,277,null,null,220,null],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        //     E    -    E    -    E    -    B    -     A    -    A    -    B    -    E    -
-        bass: [165,null,165,null,165,null,247,null, 220,null,220,null,247,null,165,null],
-        //     K    -    H    S    K    -    H    S     K    H    H    S    K    -    H    S
-        drums:[1,0,2,3, 1,0,2,3, 1,2,2,3, 1,0,2,3],
-      },
-      { // B: Melodie-Bridge – höher, intensiver, steigt zur Klimax
-        tempo: 250,
-        //          B    C    D    E    -    F#   E    D     E    -    D    -    C    B    -    A
-        mel:  [494,523,587,659,null,740,659,587, 659,null,587,null,523,494,null,440],
-        mel2: [null,null,null,null,415,null,null,370, null,415,null,370,null,null,330,null],
-        mel3: [247,null,294,null,330,null,294,null, 330,null,294,null,247,null,220,null],
-        bass: [165,null,165,null,247,null,247,null, 220,null,220,null,196,null,165,null],
-        drums:[1,0,2,3, 1,1,2,3, 1,0,2,3, 1,2,0,3],
-      },
-      { // C: Breakdown – halbe Geschwindigkeit, Spannung aufbauen
-        tempo: 280,
-        //         E    -    -    -    D    -    -    -    C    -    -    D    E    -    -    -
-        mel:  [330,null,null,null,294,null,null,null, 262,null,null,294,330,null,null,null],
-        mel2: [null,null,220,null,null,196,null,null, null,175,null,null,null,220,null,null],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [165,null,null,null,147,null,null,null, 131,null,null,null,165,null,null,null],
-        drums:[1,0,0,0, 2,0,0,2, 1,0,2,0, 3,0,0,3],
-      },
-      { // D: Finale – Riff + schnelles Arpeggio, alles eskaliert
-        tempo: 230,
-        //         E    G    A    B    C    B    A    G     E    G    A    B    E    D    C    B
-        mel:  [330,392,440,494,523,494,440,392, 330,392,440,494,659,587,523,494],
-        mel2: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,330],
-        mel3: [165,null,220,null,247,null,220,null, 165,null,220,null,330,null,247,null],
-        bass: [165,null,null,null,131,null,null,null, 165,null,null,null,247,null,196,null],
-        drums:[1,0,2,3, 1,2,0,3, 1,0,2,3, 4,2,3,4],
-      },
-    ],
-  },
-
-  fun: {
-    label: 'Fun',
-    icon:  '🎉',
-    // Bubbly Pop-Chiptune – G-Dur, synkopiert, viel Bewegung, Überraschungen
-    sections: [
-      { // A: Haupthook – eingängige Melodie
-        tempo: 340,
-        mel:  [392,null,440,494,null,523,null,494, 440,null,392,null,440,494,523,null],
-        mel2: [null,294,null,null,330,null,330,null, null,262,null,294,null,null,null,349],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [196,null,null,196,null,220,null,196,  196,null,175,null,196,null,220,null],
-        drums:[1,0,1,0, 2,0,1,2, 1,0,1,0, 2,1,0,2],
-      },
-      { // B: Call & Response – fröhlicher Dialog
-        tempo: 340,
-        mel:  [587,null,523,null,494,null,440,null, 523,587,659,null,587,523,null,494],
-        mel2: [null,370,null,330,null,311,null,294, null,null,null,415,null,null,330,null],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [196,null,220,null,196,null,175,null,  196,null,220,null,247,null,196,null],
-        drums:[1,0,0,2, 1,0,1,2, 1,1,0,2, 1,0,1,2],
-      },
-      { // C: Türkischer Anflug – orientalische Skala
-        tempo: 360,
-        mel:  [440,415,392,null,349,370,392,null, 415,440,null,466,440,415,392,null],
-        mel2: [null,null,null,262,null,null,null,247, null,null,277,null,null,null,null,233],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [110,null,null,110,null,null,110,null,  104,null,null,110,null,null,98,null],
-        drums:[1,0,1,2, 1,0,0,2, 1,0,1,2, 0,1,0,2],
-      },
-      { // D: Finale – alles raus, Konfetti-Feeling
-        tempo: 320,
-        mel:  [523,587,659,null,698,null,659,587, 523,587,659,698,784,null,698,659],
-        mel2: [null,null,null,415,null,440,null,null, null,null,null,null,null,523,null,415],
-        mel3: [null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null],
-        bass: [131,null,165,null,131,null,196,null,  131,null,165,null,196,null,165,null],
-        drums:[1,0,1,2, 1,1,0,2, 1,0,1,2, 4,0,1,2],
-      },
-    ],
-  },
-};
-
-let _activeTrackKey = 'town_chill';
-let _seqSection = 0;  // Welche Section des aktuellen Tracks
-
-
-let _crossfadeGain = null;
-function _getCrossfadeGain() {
-  if (_crossfadeGain) return _crossfadeGain;
-  const ctx = getAudioCtx();
-  _crossfadeGain = ctx.createGain();
-  _crossfadeGain.gain.value = 1;
-  _crossfadeGain.connect(ctx.destination);
-  return _crossfadeGain;
-}
-
-// Master-Gain NUR für Lautstärke-Regler – wird nie für Biome-Fade genutzt
-function _getMasterGain() {
+function getMasterGain() {
   if (_masterGain) return _masterGain;
   const ctx = getAudioCtx();
+  if (!_crossfadeGain) {
+    _crossfadeGain = ctx.createGain();
+    _crossfadeGain.gain.value = 1;
+    _crossfadeGain.connect(ctx.destination);
+  }
   _masterGain = ctx.createGain();
   _masterGain.gain.value = musicVolume;
-  _masterGain.connect(_getCrossfadeGain());
+  _masterGain.connect(_crossfadeGain);
   return _masterGain;
 }
 
-// Sanfter Crossfade beim Biomewechsel – nur _crossfadeGain berühren
-function updateMusicBiome(biomeIdx) {
-  if (_seqBiome === biomeIdx || _seqFadingTo === biomeIdx) return;
-  _seqFadingTo = biomeIdx;
-  const cfg = _getCrossfadeGain();
-  const ctx = getAudioCtx();
-  const now = ctx.currentTime;
-  cfg.gain.cancelScheduledValues(now);
-  cfg.gain.setValueAtTime(cfg.gain.value, now);
-  cfg.gain.linearRampToValueAtTime(0.0, now + 1.0);
-  setTimeout(() => {
-    _seqBiome    = biomeIdx;
-    _seqFadingTo = -1;
-    _seqStep     = 0;
-    _hihat._buf  = null;
-    if (!muted && _seqRunning) {
-      const cfg2 = _getCrossfadeGain();
-      const ctx2 = getAudioCtx();
-      cfg2.gain.cancelScheduledValues(ctx2.currentTime);
-      cfg2.gain.setValueAtTime(0, ctx2.currentTime);
-      cfg2.gain.linearRampToValueAtTime(1.0, ctx2.currentTime + 0.8);
-    }
-  }, 1050);
-}
-
-// ── Tempo via unsichtbare Y-Linien ──────────────────────────────────────────
-// 3 Schwellen: unten=langsam, mitte=normal, oben=schnell, sehr oben=sehr schnell
-// ratio: 0 = kein Ball / alles unten, 1 = Ball an der Gefahrenlinie
-let _currentStackRatio = 0;
-
-function updateMusicTempo(balls) {
-  if (!balls || balls.length === 0) { _currentStackRatio = 0; return; }
-  const now = Date.now();
-  let highestY = H;
-  for (const b of balls) {
-    if (!b.body) continue;
-    if (now - b.body._spawnTime < 1000) continue; // frisch gefallen → ignorieren
-    const vel = Math.hypot(b.body.velocity.x, b.body.velocity.y);
-    if (vel > 1.5) continue; // noch in Bewegung → ignorieren
-    const top = b.body.position.y - ANIMALS[b.body._type].r;
-    if (top < highestY) highestY = top;
-  }
-  // Ratio: 0 = kein ruhender Ball / alles unten, 1 = ruhender Ball an der Gefahrenlinie
-  const playableH = H - GAME_OVER_LINE;
-  const newRatio = Math.max(0, Math.min(1, (H - highestY) / playableH));
-  // Gestufte Übergänge an den Y-Linien (keine fließende Interpolation → klar messbar)
-  // Linie 1 bei 33%, Linie 2 bei 60%, Linie 3 bei 82%
-  let targetRatio;
-  if (newRatio < 0.33)      targetRatio = 0;    // unter Linie 1: Basistempo
-  else if (newRatio < 0.60) targetRatio = 0.33; // zwischen Linie 1+2: leicht schneller
-  else if (newRatio < 0.82) targetRatio = 0.66; // zwischen Linie 2+3: deutlich schneller
-  else                      targetRatio = 1.0;   // über Linie 3: max Tempo
-
-  // Sanft lerpen damit kein abrupter Sprung passiert
-  _currentStackRatio += (targetRatio - _currentStackRatio) * 0.08;
-}
-
-function _getTempoMs(baseTempo) {
-  // Exponentieller Anstieg: schon bei 40% Stack klar hörbar schneller
-  // ratio=0 → 1x, ratio=0.4 → ~2x, ratio=1.0 → 4x schneller
-  const speedFactor = Math.pow(4, _currentStackRatio);
-  return Math.max(55, Math.floor(baseTempo / speedFactor));
-}
-
-function _seqTick() {
-  if (!_seqRunning || muted) return;
-  const ctx   = getAudioCtx();
-  const now   = ctx.currentTime;
-  const sections = MUSIC_TRACKS[_activeTrackKey].sections;
-  // Nach 2 vollen 16-Step-Loops Section wechseln (= 32 Steps)
-  _seqSection = Math.floor(_seqStep / 32) % sections.length;
-  const track = sections[_seqSection];
-  const step  = _seqStep % 16;
-  const t     = _getTempoMs(track.tempo);
-  const out   = _getMasterGain();
-
-  if (track.mel[step])  _note(ctx, now, track.mel[step],  'sine',     t * 0.00085, 0.13, out);
-  if (track.mel2[step]) _note(ctx, now, track.mel2[step], 'triangle', t * 0.0012,  0.07, out);
-  if (track.mel3 && track.mel3[step]) _note(ctx, now, track.mel3[step], 'sine', t * 0.0008, 0.06, out);
-  if (track.bass[step]) _note(ctx, now, track.bass[step], 'sine',     t * 0.0020,  0.17, out);
-
-  const d = track.drums[step];
-  if (d === 1) _kick(ctx, now, out);
-  if (d === 2) _hihat(ctx, now, out);
-  if (d === 3) _snare(ctx, now, out);
-  if (d === 4) { _kick(ctx, now, out); _hihat(ctx, now, out); }
-
-  _seqStep++;
-  _seqHandle = setTimeout(_seqTick, t);
-}
-
-// Weichere Note mit langsamem Attack und sanftem Release
-function _note(ctx, time, freq, type, dur, vol, output) {
+function _note(ctx, time, freq, type, dur, vol, out) {
   if (muted) return;
   try {
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, time);
-    // Leichtes Vibrato für mehr Wärme
-    const lfo = ctx.createOscillator();
-    const lfoG = ctx.createGain();
-    lfo.frequency.value = 4.5;
-    lfoG.gain.value = freq * 0.006;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    const lfo = ctx.createOscillator(), lfoG = ctx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    lfo.frequency.value = 4.5; lfoG.gain.value = freq * 0.006;
     lfo.connect(lfoG); lfoG.connect(osc.frequency);
-    // Sanfte ADSR: langsamer Attack, weicher Release
     gain.gain.setValueAtTime(0, time);
     gain.gain.linearRampToValueAtTime(vol, time + Math.min(dur * 0.18, 0.06));
     gain.gain.setValueAtTime(vol * 0.82, time + dur * 0.5);
     gain.gain.linearRampToValueAtTime(0, time + dur);
-    osc.connect(gain); gain.connect(output);
+    osc.connect(gain); gain.connect(out);
     lfo.start(time); lfo.stop(time + dur + 0.05);
     osc.start(time); osc.stop(time + dur + 0.05);
   } catch(_) {}
 }
 
-function _kick(ctx, time, output) {
+function _kick(ctx, time, out) {
   try {
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.frequency.setValueAtTime(90, time);
     osc.frequency.exponentialRampToValueAtTime(38, time + 0.14);
     gain.gain.setValueAtTime(0.22, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.20);
-    osc.connect(gain); gain.connect(output);
+    osc.connect(gain); gain.connect(out);
     osc.start(time); osc.stop(time + 0.22);
   } catch(_) {}
 }
 
-// Sanfter Hihat statt Snare – viel weniger aggressiv
-function _hihat(ctx, time, output) {
+function _hihat(ctx, time, out) {
   try {
-    if (!_hihat._buf || _hihat._ctx !== ctx) {
-      const buf  = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.4;
-      _hihat._buf = buf; _hihat._ctx = ctx;
+    if (!_hihatBuf || _hihatBufCtx !== ctx) {
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.4;
+      _hihatBuf = buf; _hihatBufCtx = ctx;
     }
-    const src  = ctx.createBufferSource();
-    src.buffer = _hihat._buf;
-    // Hochpassfilter: nur hohe Frequenzen → klingt wie echter Hihat, nicht Rauschen
-    const hp   = ctx.createBiquadFilter();
-    hp.type = 'highpass'; hp.frequency.value = 6000;
-    const gain = ctx.createGain();
+    const src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), gain = ctx.createGain();
+    src.buffer = _hihatBuf; hp.type = 'highpass'; hp.frequency.value = 6000;
     gain.gain.setValueAtTime(0.10, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
-    src.connect(hp); hp.connect(gain); gain.connect(output);
+    src.connect(hp); hp.connect(gain); gain.connect(out);
     src.start(time); src.stop(time + 0.07);
   } catch(_) {}
 }
 
-
-// Snare – weißes Rauschen + Body-Ton
-function _snare(ctx, time, output) {
+function _snare(ctx, time, out) {
   try {
-    // Rausch-Anteil
-    const buf  = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.12), ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
-    const src  = ctx.createBufferSource();
-    src.buffer = buf;
-    const hp   = ctx.createBiquadFilter();
-    hp.type = 'highpass'; hp.frequency.value = 1800;
-    const gn   = ctx.createGain();
-    gn.gain.setValueAtTime(0.18, time);
-    gn.gain.exponentialRampToValueAtTime(0.001, time + 0.10);
-    src.connect(hp); hp.connect(gn); gn.connect(output);
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.12), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), gn = ctx.createGain();
+    src.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 1800;
+    gn.gain.setValueAtTime(0.18, time); gn.gain.exponentialRampToValueAtTime(0.001, time + 0.10);
+    src.connect(hp); hp.connect(gn); gn.connect(out);
     src.start(time); src.stop(time + 0.13);
-    // Body-Ton
-    const osc  = ctx.createOscillator();
-    const og   = ctx.createGain();
-    osc.frequency.setValueAtTime(180, time);
-    osc.frequency.exponentialRampToValueAtTime(80, time + 0.06);
-    og.gain.setValueAtTime(0.14, time);
-    og.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
-    osc.connect(og); og.connect(output);
-    osc.start(time); osc.stop(time + 0.09);
+    const osc = ctx.createOscillator(), og = ctx.createGain();
+    osc.frequency.setValueAtTime(180, time); osc.frequency.exponentialRampToValueAtTime(80, time + 0.06);
+    og.gain.setValueAtTime(0.14, time); og.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    osc.connect(og); og.connect(out); osc.start(time); osc.stop(time + 0.09);
   } catch(_) {}
 }
 
+// Musik-Tracks
+const MUSIC_TRACKS = {
+  town_chill:{label:'Town Chill',icon:'🏘️',sections:[
+    {tempo:560,mel:[392,null,440,null,392,330,null,294,330,null,294,262,null,294,null,330],mel2:[null,247,null,247,null,null,196,null,null,196,null,null,175,null,196,null],bass:[131,null,null,165,null,131,null,null,110,null,null,131,null,110,null,null],drums:[1,0,0,2,0,1,0,2,1,0,0,2,0,1,0,2]},
+    {tempo:560,mel:[330,null,294,330,null,392,null,440,392,null,330,null,294,null,330,null],mel2:[null,196,null,null,247,null,247,null,null,247,null,196,null,196,null,247],bass:[98,null,null,110,null,null,131,null,110,null,null,98,null,null,110,null],drums:[1,0,0,2,1,0,1,2,0,0,1,2,1,0,0,2]},
+    {tempo:540,mel:[523,null,494,null,440,null,392,null,440,494,523,null,587,null,523,null],mel2:[null,330,null,311,null,262,null,247,null,null,null,330,null,370,null,330],bass:[131,null,165,null,131,null,110,null,131,null,131,null,165,null,131,null],drums:[1,0,1,2,0,0,1,2,1,0,1,2,0,1,0,2]},
+    {tempo:600,mel:[262,null,null,294,null,null,330,null,null,294,null,null,262,null,null,null],mel2:[null,null,196,null,null,175,null,null,196,null,null,175,null,null,165,null],bass:[98,null,null,null,131,null,null,null,98,null,null,null,110,null,null,null],drums:[1,0,0,0,2,0,0,0,1,0,0,2,0,0,0,0]},
+  ]},
+  power:{label:'Power',icon:'⚡',sections:[
+    {tempo:250,mel:[330,null,330,392,null,440,392,330,494,null,440,null,392,330,null,294],mel2:[null,220,null,null,247,null,null,null,null,311,null,277,null,null,220,null],bass:[165,null,165,null,165,null,247,null,220,null,220,null,247,null,165,null],drums:[1,0,2,3,1,0,2,3,1,2,2,3,1,0,2,3]},
+    {tempo:250,mel:[494,523,587,659,null,740,659,587,659,null,587,null,523,494,null,440],mel2:[null,null,null,null,415,null,null,370,null,415,null,370,null,null,330,null],bass:[165,null,165,null,247,null,247,null,220,null,220,null,196,null,165,null],drums:[1,0,2,3,1,1,2,3,1,0,2,3,1,2,0,3]},
+    {tempo:280,mel:[330,null,null,null,294,null,null,null,262,null,null,294,330,null,null,null],mel2:[null,null,220,null,null,196,null,null,null,175,null,null,null,220,null,null],bass:[165,null,null,null,147,null,null,null,131,null,null,null,165,null,null,null],drums:[1,0,0,0,2,0,0,2,1,0,2,0,3,0,0,3]},
+    {tempo:230,mel:[330,392,440,494,523,494,440,392,330,392,440,494,659,587,523,494],mel2:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,330],bass:[165,null,null,null,131,null,null,null,165,null,null,null,247,null,196,null],drums:[1,0,2,3,1,2,0,3,1,0,2,3,4,2,3,4]},
+  ]},
+  fun:{label:'Fun',icon:'🎉',sections:[
+    {tempo:340,mel:[392,null,440,494,null,523,null,494,440,null,392,null,440,494,523,null],mel2:[null,294,null,null,330,null,330,null,null,262,null,294,null,null,null,349],bass:[196,null,null,196,null,220,null,196,196,null,175,null,196,null,220,null],drums:[1,0,1,0,2,0,1,2,1,0,1,0,2,1,0,2]},
+    {tempo:340,mel:[587,null,523,null,494,null,440,null,523,587,659,null,587,523,null,494],mel2:[null,370,null,330,null,311,null,294,null,null,null,415,null,null,330,null],bass:[196,null,220,null,196,null,175,null,196,null,220,null,247,null,196,null],drums:[1,0,0,2,1,0,1,2,1,1,0,2,1,0,1,2]},
+    {tempo:360,mel:[440,415,392,null,349,370,392,null,415,440,null,466,440,415,392,null],mel2:[null,null,null,262,null,null,null,247,null,null,277,null,null,null,null,233],bass:[110,null,null,110,null,null,110,null,104,null,null,110,null,null,98,null],drums:[1,0,1,2,1,0,0,2,1,0,1,2,0,1,0,2]},
+    {tempo:320,mel:[523,587,659,null,698,null,659,587,523,587,659,698,784,null,698,659],mel2:[null,null,null,415,null,440,null,null,null,null,null,null,null,523,null,415],bass:[131,null,165,null,131,null,196,null,131,null,165,null,196,null,165,null],drums:[1,0,1,2,1,1,0,2,1,0,1,2,4,0,1,2]},
+  ]},
+};
+
+function _getTempoMs(base) {
+  return Math.max(55, Math.floor(base / Math.pow(4, _currentStackRatio)));
+}
+
+function _seqTick() {
+  if (!_seqRunning || muted) return;
+  const ctx = getAudioCtx(), now = ctx.currentTime;
+  const sections = MUSIC_TRACKS[_activeTrackKey].sections;
+  _seqSection = Math.floor(_seqStep / 32) % sections.length;
+  const track = sections[_seqSection], step = _seqStep % 16;
+  const t = _getTempoMs(track.tempo), out = getMasterGain();
+  if (track.mel[step])  _note(ctx, now, track.mel[step],  'sine',     t*.00085, 0.13, out);
+  if (track.mel2[step]) _note(ctx, now, track.mel2[step], 'triangle', t*.0012,  0.07, out);
+  if (track.bass[step]) _note(ctx, now, track.bass[step], 'sine',     t*.0020,  0.17, out);
+  const d = track.drums[step];
+  if (d===1||d===4) _kick(ctx, now, out);
+  if (d===2||d===4) _hihat(ctx, now, out);
+  if (d===3) _snare(ctx, now, out);
+  _seqStep++;
+  _seqHandle = setTimeout(_seqTick, t);
+}
+
 function startBgMusic() {
-  if (muted) return;
-  if (_seqRunning) return;
-  _seqRunning = true;
-  _seqStep    = 0;
-  _seqSection = 0;
-  _seqTick();
+  if (muted || _seqRunning) return;
+  _seqRunning = true; _seqStep = 0; _seqSection = 0; _seqTick();
+}
+
+function stopBgMusic() {
+  if (_seqHandle) { clearTimeout(_seqHandle); _seqHandle = null; }
+  _seqRunning = false;
 }
 
 function switchMusicTrack(key) {
   if (key === _activeTrackKey) return;
   _activeTrackKey = key;
-  // Kurzer Crossfade: kurz fade out, sofort neuen Track starten
-  const cfg = _getCrossfadeGain();
-  const ctx = getAudioCtx();
-  const now = ctx.currentTime;
+  const cfg = _crossfadeGain, ctx = getAudioCtx(), now = ctx.currentTime;
+  if (!cfg) { _seqStep = 0; _seqSection = 0; return; }
   cfg.gain.cancelScheduledValues(now);
   cfg.gain.setValueAtTime(cfg.gain.value, now);
   cfg.gain.linearRampToValueAtTime(0, now + 0.4);
   setTimeout(() => {
-    _seqStep    = 0;
-    _seqSection = 0;
-    _hihat._buf = null;
-    if (!muted && _seqRunning) {
-      const cfg2 = _getCrossfadeGain();
-      const ctx2 = getAudioCtx();
-      cfg2.gain.cancelScheduledValues(ctx2.currentTime);
-      cfg2.gain.setValueAtTime(0, ctx2.currentTime);
-      cfg2.gain.linearRampToValueAtTime(1.0, ctx2.currentTime + 0.5);
+    _seqStep = 0; _seqSection = 0; _hihatBuf = null;
+    if (!muted && _seqRunning && _crossfadeGain) {
+      const c2 = _crossfadeGain, ctx2 = getAudioCtx();
+      c2.gain.cancelScheduledValues(ctx2.currentTime);
+      c2.gain.setValueAtTime(0, ctx2.currentTime);
+      c2.gain.linearRampToValueAtTime(1, ctx2.currentTime + 0.5);
     }
   }, 420);
 }
 
-function resetBgMusicBiome() {
-  // Biome sofort auf 0 zuruecksetzen (kein Crossfade beim Neustart)
-  _seqBiome    = 0;
-  _seqFadingTo = -1;
-  _seqStep     = 0;
-  _hihat._buf  = null;
-  // Tagesablauf laeuft weiter – _bgBodyColor bleibt aktuell
-  _currentStackRatio = 0;
-  // Crossfade-Gain sofort auf 1 zurueck
+function resetBgMusic() {
+  _seqStep = 0; _seqSection = 0; _currentStackRatio = 0; _hihatBuf = null;
   if (_crossfadeGain) {
     try {
       const ctx = getAudioCtx();
@@ -1021,1886 +305,890 @@ function resetBgMusicBiome() {
   }
 }
 
-function stopBgMusic() {
-  if (_seqHandle) { clearTimeout(_seqHandle); _seqHandle = null; }
-  _seqRunning = false;
+function updateMusicTempo(balls) {
+  if (!balls?.length) { _currentStackRatio = 0; return; }
+  const now = Date.now();
+  let highestY = H;
+  for (const b of balls) {
+    if (!b.body || now - b.body._spawnTime < 1000) continue;
+    if (Math.hypot(b.body.velocity.x, b.body.velocity.y) > 1.5) continue;
+    const top = b.body.position.y - ANIMALS[b.body._type].r;
+    if (top < highestY) highestY = top;
+  }
+  const newRatio = Math.max(0, Math.min(1, (H - highestY) / (H - GAME_OVER_LINE)));
+  const target = newRatio < 0.33 ? 0 : newRatio < 0.60 ? 0.33 : newRatio < 0.82 ? 0.66 : 1;
+  _currentStackRatio += (target - _currentStackRatio) * 0.08;
 }
 
-// ─── Drop-Sound: sofort, weich ───────────────────────────────────────────────
+// SFX
 function playDropSound() {
   if (muted) return;
   try {
-    const ctx  = getAudioCtx();
-    const t    = ctx.currentTime;
-    const out  = _getMasterGain();
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(280, t);
-    osc.frequency.exponentialRampToValueAtTime(140, t + 0.10);
-    gain.gain.setValueAtTime(0.16 * sfxVolume, t);
-    gain.gain.linearRampToValueAtTime(0, t + 0.12);
-    osc.connect(gain); gain.connect(out);
-    osc.start(t); osc.stop(t + 0.14);
+    const ctx = getAudioCtx(), t = ctx.currentTime, out = getMasterGain();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(280, t); osc.frequency.exponentialRampToValueAtTime(140, t+.10);
+    gain.gain.setValueAtTime(.16*sfxVolume, t); gain.gain.linearRampToValueAtTime(0, t+.12);
+    osc.connect(gain); gain.connect(out); osc.start(t); osc.stop(t+.14);
   } catch(_) {}
 }
 
-// ─── Merge-Sound: warm, smooth, organisch ────────────────────────────────────
 function playMergeSound(level) {
   if (muted) return;
-  _playMergeNow(level);
-}
-
-function _playMergeNow(level) {
-  const ctx  = getAudioCtx();
-  const t    = ctx.currentTime;
-  const out  = _getMasterGain();
-
-  // Grundton steigt sanft mit dem Level (Pentatonik-Töne)
-  const roots = [262, 294, 330, 370, 392, 440, 494, 523, 587, 659];
-  const root  = roots[Math.min(level, roots.length - 1)];
-
-  // Chorus-Effekt: zwei leicht verstimmte Sinus-Wellen → warm, nicht metallisch
-  [[root, 0], [root * 1.003, 0.01]].forEach(([freq, offset]) => {
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, t + offset);
-    gain.gain.setValueAtTime(0, t + offset);
-    gain.gain.linearRampToValueAtTime(0.18 * sfxVolume, t + offset + 0.04);
-    gain.gain.setValueAtTime(0.16 * sfxVolume, t + offset + 0.12);
-    gain.gain.linearRampToValueAtTime(0, t + offset + 0.55);
-    osc.connect(gain); gain.connect(out);
-    osc.start(t + offset); osc.stop(t + 0.62);
+  const ctx = getAudioCtx(), t = ctx.currentTime, out = getMasterGain();
+  const roots = [262,294,330,370,392,440,494,523,587,659];
+  const root = roots[Math.min(level, roots.length-1)];
+  [[root,0],[root*1.003,.01]].forEach(([freq,offset]) => {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, t+offset);
+    gain.gain.linearRampToValueAtTime(.18*sfxVolume, t+offset+.04);
+    gain.gain.setValueAtTime(.16*sfxVolume, t+offset+.12);
+    gain.gain.linearRampToValueAtTime(0, t+offset+.55);
+    osc.connect(gain); gain.connect(out); osc.start(t+offset); osc.stop(t+.62);
   });
-
-  // Oktave drüber: triangle, sehr leise → Oberton-Wärme
-  const osc2  = ctx.createOscillator();
-  const gain2 = ctx.createGain();
-  osc2.type = 'triangle';
-  osc2.frequency.value = root * 2;
-  gain2.gain.setValueAtTime(0, t);
-  gain2.gain.linearRampToValueAtTime(0.07 * sfxVolume, t + 0.05);
-  gain2.gain.linearRampToValueAtTime(0, t + 0.40);
-  osc2.connect(gain2); gain2.connect(out);
-  osc2.start(t); osc2.stop(t + 0.42);
-
-  // Für höhere Level: kleiner aufsteigender Akkord-Sweep (Quinte)
   if (level >= 4) {
-    const osc3  = ctx.createOscillator();
-    const gain3 = ctx.createGain();
-    osc3.type = 'sine';
-    osc3.frequency.setValueAtTime(root * 1.5, t + 0.08);
-    gain3.gain.setValueAtTime(0, t + 0.08);
-    gain3.gain.linearRampToValueAtTime(0.09, t + 0.14);
-    gain3.gain.linearRampToValueAtTime(0, t + 0.50);
-    osc3.connect(gain3); gain3.connect(out);
-    osc3.start(t + 0.08); osc3.stop(t + 0.52);
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = root * 1.5;
+    gain.gain.setValueAtTime(0, t+.08); gain.gain.linearRampToValueAtTime(.09, t+.14); gain.gain.linearRampToValueAtTime(0, t+.50);
+    osc.connect(gain); gain.connect(out); osc.start(t+.08); osc.stop(t+.52);
   }
 }
 
-// Wrapper damit SFX-Funktionen den AudioContext immer bereit haben
-function _playSFX(fn) {
-  try {
-    const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') { ctx.resume().then(() => fn(ctx)); return; }
-    fn(ctx);
-  } catch(_) {}
-}
-
-// ─── Fanfare: NES-Victory-Jingle, vollständig intern scheduliert ─────────────
 function playFanfare() {
   if (muted) return;
   try {
-    const ctx = getAudioCtx();
-    const t0  = ctx.currentTime + 0.02;
-    const melody = [
-      { f: 523,  dt: 0.00 }, { f: 659,  dt: 0.10 }, { f: 784,  dt: 0.20 },
-      { f: 1047, dt: 0.30 }, { f: 1319, dt: 0.45 }, { f: 1568, dt: 0.60 },
-      { f: 523,  dt: 0.88 }, { f: 659,  dt: 0.88 }, { f: 784,  dt: 0.88 }, { f: 1047, dt: 0.88 },
-    ];
-    melody.forEach(({ f, dt }) => {
-      const osc  = _createPulseOsc(ctx, f, 0.25);
-      const gain = ctx.createGain();
-      const st   = t0 + dt;
-      gain.gain.setValueAtTime(0.18 * sfxVolume, st);
-      gain.gain.exponentialRampToValueAtTime(0.001, st + 0.38);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(st); osc.stop(st + 0.4);
+    const ctx = getAudioCtx(), t0 = ctx.currentTime + 0.02;
+    [[523,.00],[659,.10],[784,.20],[1047,.30],[1319,.45],[1568,.60],[523,.88],[659,.88],[784,.88],[1047,.88]].forEach(([f,dt]) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'square'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(.18*sfxVolume, t0+dt); gain.gain.exponentialRampToValueAtTime(.001, t0+dt+.38);
+      osc.connect(gain); gain.connect(ctx.destination); osc.start(t0+dt); osc.stop(t0+dt+.4);
     });
-    // Kick-Hits intern
-    [0, 0.10, 0.20, 0.30].forEach(dt => _kick(ctx, t0 + dt));
-    // Sawtooth-Tröte
-    const toot  = ctx.createOscillator();
-    const tgain = ctx.createGain();
-    toot.type = 'sawtooth';
-    toot.frequency.setValueAtTime(300, t0 + 0.9);
-    toot.frequency.exponentialRampToValueAtTime(900, t0 + 1.4);
-    tgain.gain.setValueAtTime(0.22 * sfxVolume, t0 + 0.9);
-    tgain.gain.exponentialRampToValueAtTime(0.001, t0 + 1.8);
-    toot.connect(tgain); tgain.connect(ctx.destination);
-    toot.start(t0 + 0.9); toot.stop(t0 + 1.9);
-  } catch (_) {}
+    [0,.10,.20,.30].forEach(dt => _kick(ctx, t0+dt, ctx.destination));
+  } catch(_) {}
 }
 
-// ─── Elefanten-Sound ─────────────────────────────────────────────────────────
 function playElephantSound() {
   if (muted) return;
   try {
-    const ctx = getAudioCtx();
-    const t0  = ctx.currentTime + 0.01;
-    [
-      { f: 180, dt: 0.0,  dur: 0.3  },
-      { f: 220, dt: 0.3,  dur: 0.25 },
-      { f: 380, dt: 0.55, dur: 0.4  },
-    ].forEach(({ f, dt, dur }) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(f, t0 + dt);
-      osc.frequency.exponentialRampToValueAtTime(f * 1.5, t0 + dt + dur);
-      gain.gain.setValueAtTime(0.25 * sfxVolume, t0 + dt);
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + dt + dur);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(t0 + dt); osc.stop(t0 + dt + dur + 0.02);
+    const ctx = getAudioCtx(), t0 = ctx.currentTime + 0.01;
+    [[180,0,.3],[220,.3,.25],[380,.55,.4]].forEach(([f,dt,dur]) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(f, t0+dt); osc.frequency.exponentialRampToValueAtTime(f*1.5, t0+dt+dur);
+      gain.gain.setValueAtTime(.25*sfxVolume, t0+dt); gain.gain.exponentialRampToValueAtTime(.001, t0+dt+dur);
+      osc.connect(gain); gain.connect(ctx.destination); osc.start(t0+dt); osc.stop(t0+dt+dur+.02);
     });
-  } catch (_) {}
+  } catch(_) {}
 }
 
-// ========================================
-// SPIEL-KONFIGURATION
-// ========================================
+// ── Spiel-Dimensionen ────────────────────────────────────────────────────────
 function getGameSize() {
-  const maxWidth = Math.min(window.innerWidth - 20, 480);
-  const W = Math.min(maxWidth, 420);
-  const H = Math.floor(W * (580 / 420));
-  return { W, H };
+  const W = Math.min(window.innerWidth - 20, 420);
+  return { W, H: Math.floor(W * 580 / 420) };
 }
-
 let { W, H } = getGameSize();
-const GAME_OVER_LINE = Math.floor(H * (100 / 580)); // etwas tiefer → kein Überlappen mit Canvas-Rand
-const DROP_Y_OFFSET  = Math.floor(H * (12 / 580));  // mehr Abstand → Preview-Ball klar sichtbar
-const SCALE_FACTOR   = W / 420;
+const GAME_OVER_LINE = Math.floor(H * 100 / 580);
+const SCALE_FACTOR = W / 420;
 
-// ========================================
-// EMOJI-KATEGORIEN
-// ========================================
+// ── Emoji-Kategorien ─────────────────────────────────────────────────────────
 const EMOJI_CATEGORIES = {
-  zoo: {
-    // Klein → Groß: Maus < Hase < Fuchs < Affe < Hund < Katze < Bär < Tiger < Löwe < Elefant
-    label:  'Zoo-Tiere',
-    icon:   '🐘',
-    emojis: ['🐭','🐰','🦊','🐵','🐶','🐱','🐻','🐯','🦁','🐘'],
-    colors: [0xf0e6ff, 0xffd6ee, 0xffddb8, 0xfff0b8, 0xd4f5d4, 0xc8f0ff, 0xd8ecf5, 0xffebd4, 0xe8e8ff, 0xe8d4ff],
-  },
-  ocean: {
-    // Klein → Groß: Garnele < Muschel < Krabbe < Kugelfisch < Fisch < Tintenfisch < Oktopus < Delphin < Hai < Wal
-    label:  'Meerestiere',
-    icon:   '🐳',
-    emojis: ['🦐','🐚','🦀','🐡','🐟','🦑','🐙','🐬','🦈','🐳'],
-    colors: [0xffe8d4, 0xfff0e0, 0xffd4c8, 0xfff5b8, 0xc8e8ff, 0xebd4ff, 0xffd4e8, 0xd4f0ff, 0xd4dff5, 0xc8d8ff],
-  },
-  farm: {
-    // Klein → Groß: Küken < Küken(groß) < Hase < Schaf < Ziege < Schwein < Ente < Kuh < Pferd < Esel
-    label:  'Bauernhof',
-    icon:   '🐄',
-    emojis: ['🐣','🐤','🐇','🐑','🐐','🐖','🦆','🐄','🐴','🫏'],
-    colors: [0xfff5c0, 0xffeea0, 0xf5f5f5, 0xf5e8d8, 0xdff0cc, 0xffddd4, 0xd4ecff, 0xf0ddb0, 0xeeddbb, 0xf0d8a8],
-  },
-  bugs: {
-    // Klein → Groß: Raupe < Ameise < Biene < Mücke < Heuschrecke < Käfer < Schnecke < Eidechse < Frosch < Schmetterling
-    label:  'Insekten',
-    icon:   '🦋',
-    emojis: ['🐛','🐜','🐝','🦟','🦗','🪲','🐌','🦎','🐸','🦋'],
-    colors: [0xd8f0b0, 0xe8ddd4, 0xfff0a0, 0xd4e4f5, 0xd4e8d8, 0xeeddcc, 0xeeddbb, 0xd4f0d4, 0xc8f5d8, 0xffd8f0],
-  },
-  space: {
-    // Klein → Groß: Stern < Mond < Funkeln < Komet < Saturn < Erde < Leuchtstern < UFO < Rakete < Galaxie
-    label:  'Weltraum',
-    icon:   '🚀',
-    emojis: ['⭐','🌙','💫','☄️','🪐','🌍','🌟','🛸','🚀','🌌'],
-    colors: [0xfff5b8, 0xe8d8ff, 0xfffff0, 0xffddb8, 0xeed8ff, 0xc8e8ff, 0xffff99, 0xc8ffee, 0xffd4c8, 0xd4c8ff],
-  },
-  food: {
-    // Klein → Groß: Weintraube < Erdbeere < Donut < Taco < Sushi < Nudelsuppe < Pizza < Hamburger < Torte < Geburtstagskuchen
-    label:  'Essen',
-    icon:   '🍕',
-    emojis: ['🍇','🍓','🍩','🌮','🍣','🍜','🍕','🍔','🍰','🎂'],
-    colors: [0xeed8ff, 0xffd8d8, 0xfff0d4, 0xfff5dd, 0xffe8e8, 0xfff5e4, 0xffddd4, 0xffe8cc, 0xffe0ee, 0xffd8ee],
-  },
-  sports: {
-    // Klein → Groß: Tischtennis < Tennis < Fußball < Basketball < Billard < Football < Boxhandschuh < Zielscheibe < Pokal < Krone
-    label:  'Sport',
-    icon:   '⚽',
-    emojis: ['🏓','🎾','⚽','🏀','🎱','🏈','🥊','🎯','🏆','👑'],
-    colors: [0xf0f0f8, 0xfff8cc, 0xf0f0f0, 0xffe8cc, 0xe8e8e8, 0xf5e4cc, 0xffd8d8, 0xffd8d8, 0xfff0cc, 0xfff8cc],
-  },
-  fantasy: {
-    // Klein → Groß: Pilz < Kristallkugel < Böses Auge < Blitz < Regenbogen < Einhorn < Knaller < Auge < Drache < Diamant
-    label:  'Fantasy',
-    icon:   '🐉',
-    emojis: ['🍄','🔮','🧿','⚡','🌈','🦄','🧨','👁️','🐉','💎'],
-    colors: [0xffd8d8, 0xe8d8ff, 0xd8e0ff, 0xfff8d8, 0xffe8f0, 0xffe8ff, 0xffd8d8, 0xddeeff, 0xd4f5ee, 0xd8ffff],
-  },
+  zoo:     {label:'Zoo-Tiere', icon:'🐘', emojis:['🐭','🐰','🦊','🐵','🐶','🐱','🐻','🐯','🦁','🐘'], colors:[0xf0e6ff,0xffd6ee,0xffddb8,0xfff0b8,0xd4f5d4,0xc8f0ff,0xd8ecf5,0xffebd4,0xe8e8ff,0xe8d4ff]},
+  ocean:   {label:'Meeres',   icon:'🐳', emojis:['🦐','🐚','🦀','🐡','🐟','🦑','🐙','🐬','🦈','🐳'], colors:[0xffe8d4,0xfff0e0,0xffd4c8,0xfff5b8,0xc8e8ff,0xebd4ff,0xffd4e8,0xd4f0ff,0xd4dff5,0xc8d8ff]},
+  farm:    {label:'Bauernhof',icon:'🐄', emojis:['🐣','🐤','🐇','🐑','🐐','🐖','🦆','🐄','🐴','🫏'], colors:[0xfff5c0,0xffeea0,0xf5f5f5,0xf5e8d8,0xdff0cc,0xffddd4,0xd4ecff,0xf0ddb0,0xeeddbb,0xf0d8a8]},
+  bugs:    {label:'Insekten', icon:'🦋', emojis:['🐛','🐜','🐝','🦟','🦗','🪲','🐌','🦎','🐸','🦋'], colors:[0xd8f0b0,0xe8ddd4,0xfff0a0,0xd4e4f5,0xd4e8d8,0xeeddcc,0xeeddbb,0xd4f0d4,0xc8f5d8,0xffd8f0]},
+  space:   {label:'Weltraum', icon:'🚀', emojis:['⭐','🌙','💫','☄️','🪐','🌍','🌟','🛸','🚀','🌌'], colors:[0xfff5b8,0xe8d8ff,0xfffff0,0xffddb8,0xeed8ff,0xc8e8ff,0xffff99,0xc8ffee,0xffd4c8,0xd4c8ff]},
+  food:    {label:'Essen',    icon:'🍕', emojis:['🍇','🍓','🍩','🌮','🍣','🍜','🍕','🍔','🍰','🎂'], colors:[0xeed8ff,0xffd8d8,0xfff0d4,0xfff5dd,0xffe8e8,0xfff5e4,0xffddd4,0xffe8cc,0xffe0ee,0xffd8ee]},
+  sports:  {label:'Sport',    icon:'⚽', emojis:['🏓','🎾','⚽','🏀','🎱','🏈','🥊','🎯','🏆','👑'], colors:[0xf0f0f8,0xfff8cc,0xf0f0f0,0xffe8cc,0xe8e8e8,0xf5e4cc,0xffd8d8,0xffd8d8,0xfff0cc,0xfff8cc]},
+  fantasy: {label:'Fantasy',  icon:'🐉', emojis:['🍄','🔮','🧿','⚡','🌈','🦄','🧨','👁️','🐉','💎'], colors:[0xffd8d8,0xe8d8ff,0xd8e0ff,0xfff8d8,0xffe8f0,0xffe8ff,0xffd8d8,0xddeeff,0xd4f5ee,0xd8ffff]},
 };
-
 let activeCategory = 'zoo';
 
-// Randfarbe = Ballfarbe leicht aufgehellt, dann minimal abgedunkelt → weicher, pastelliger Rand
-function _borderColorFor(hexColor) {
-  // Erst leicht aufhellen (Richtung Weiß), dann sanft abdunkeln → cremiger Pastellrand
-  const mix = (ch) => Math.round(ch + (255 - ch) * 0.30); // 30% Richtung Weiß
-  const dim = (ch) => Math.round(ch * 0.82);               // dann 18% dunkler
-  const r = dim(mix((hexColor >> 16) & 0xff));
-  const g = dim(mix((hexColor >> 8)  & 0xff));
-  const b = dim(mix( hexColor        & 0xff));
-  return (r << 16) | (g << 8) | b;
+function _borderColor(hex) {
+  const mix = c => Math.round(c + (255-c)*.30);
+  const dim = c => Math.round(c*.82);
+  const r=dim(mix((hex>>16)&0xff)), g=dim(mix((hex>>8)&0xff)), b=dim(mix(hex&0xff));
+  return (r<<16)|(g<<8)|b;
 }
 
-// Stellt sicher dass Farben nicht zu hell (fast weiß) werden
-// Hellt zu dunkle Farben auf, verdunkelt zu helle leicht
 function _sanitizeColor(hex) {
-  const r = (hex >> 16) & 0xff;
-  const g = (hex >> 8)  & 0xff;
-  const b =  hex        & 0xff;
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  if (brightness > 235) {
-    // Zu hell → leicht abdunkeln und einfärben damit kein Weiß-Kreis
-    const f = 0.82;
-    return (Math.round(r * f) << 16) | (Math.round(g * f) << 8) | Math.round(b * f);
+  const r=(hex>>16)&0xff, g=(hex>>8)&0xff, b=hex&0xff;
+  if ((r*299+g*587+b*114)/1000 > 235) {
+    return (Math.round(r*.82)<<16)|(Math.round(g*.82)<<8)|Math.round(b*.82);
   }
   return hex;
 }
 
-function getAnimalsForCategory(catKey) {
-  const cat    = EMOJI_CATEGORIES[catKey];
-  const radii  = [18, 26, 34, 42, 50, 58, 67, 76, 86, 98];
-  return cat.emojis.map((emoji, i) => ({
-    emoji,
-    r:     Math.floor(radii[i] * SCALE_FACTOR),
-    color: _sanitizeColor(cat.colors[i]),
-  }));
+const RADII = [18,26,34,42,50,58,67,76,86,98];
+function getAnimals(catKey) {
+  const cat = EMOJI_CATEGORIES[catKey];
+  return cat.emojis.map((emoji,i) => ({emoji, r:Math.floor(RADII[i]*SCALE_FACTOR), color:_sanitizeColor(cat.colors[i])}));
 }
+let ANIMALS = getAnimals('zoo');
 
-let ANIMALS = getAnimalsForCategory('zoo');
-
-// ========================================
-// TAGESZEIT-ZYKLUS
-// Ein vollstaendiger Tag = 600 Punkte → dann wiederholt sich der Zyklus
-// phase 0..1 beschreibt die Tageszeit kontinuierlich
-// ========================================
-// Zeitbasierter Tagesablauf: laeuft immer, unabhaengig von Balls oder Score
-// Ein vollstaendiger Tag dauert 4 Minuten (240 Sekunden)
-const DAY_CYCLE_SECONDS = 240;
-// Startet bei Mittag (phase = 0.50)
+// ── Tageszeit-System ─────────────────────────────────────────────────────────
 let _dayCycleStart = Date.now() - 0.50 * DAY_CYCLE_SECONDS * 1000;
 
-function getDayPhase(score) {
-  // Zeitbasiert: ignoriert Score, laeuft immer weiter
-  const elapsed = (Date.now() - _dayCycleStart) / 1000;
-  return (elapsed % DAY_CYCLE_SECONDS) / DAY_CYCLE_SECONDS;
-}
-// phase: 0=Mitternacht, 0.5=Mittag, 1=Mitternacht
-// KLARE Tageszeiten: Tag = echtes Hellblau, Nacht = tiefes Dunkelblau
 const SKY_KEYS = [
-  { p: 0.00, top: '#0b1035', bot: '#141c50' },  // Mitternacht – tiefes Marineblau
-  { p: 0.15, top: '#0d1240', bot: '#18206a' },  // Tiefe Nacht
-  { p: 0.22, top: '#1e1a50', bot: '#3a2468' },  // Vor Morgenröte – Indigo
-  { p: 0.27, top: '#8a3848', bot: '#c06040' },  // Morgenröte – Rot-Orange
-  { p: 0.33, top: '#d88040', bot: '#f0b860' },  // Goldene Stunde – warmes Orange
-  { p: 0.40, top: '#48a8e0', bot: '#90cef0' },  // Morgen – Hellblau
-  { p: 0.50, top: '#1878c8', bot: '#60b0e8' },  // Mittag – sattes klares Blau
-  { p: 0.60, top: '#2888d0', bot: '#70b8ec' },  // Nachmittag – klares Blau
-  { p: 0.67, top: '#d88040', bot: '#f0b860' },  // Goldene Stunde abends
-  { p: 0.73, top: '#a84030', bot: '#d06040' },  // Sonnenuntergang – Orangerot
-  { p: 0.80, top: '#3a1840', bot: '#201030' },  // Dämmerung – Dunkelviolett
-  { p: 0.88, top: '#101438', bot: '#141848' },  // Frühe Nacht – Dunkelblau
-  { p: 1.00, top: '#0b1035', bot: '#141c50' },  // Mitternacht (wieder)
+  {p:0.00,top:'#0b1035',bot:'#141c50'},{p:0.15,top:'#0d1240',bot:'#18206a'},
+  {p:0.22,top:'#1e1a50',bot:'#3a2468'},{p:0.27,top:'#8a3848',bot:'#c06040'},
+  {p:0.33,top:'#d88040',bot:'#f0b860'},{p:0.40,top:'#48a8e0',bot:'#90cef0'},
+  {p:0.50,top:'#1878c8',bot:'#60b0e8'},{p:0.60,top:'#2888d0',bot:'#70b8ec'},
+  {p:0.67,top:'#d88040',bot:'#f0b860'},{p:0.73,top:'#a84030',bot:'#d06040'},
+  {p:0.80,top:'#3a1840',bot:'#201030'},{p:0.88,top:'#101438',bot:'#141848'},
+  {p:1.00,top:'#0b1035',bot:'#141c50'},
 ];
-
-// Hügelfarben – hell tagsüber, sehr dunkel nachts
 const HILL_KEYS = [
-  { p: 0.00, c: '#0a1a0e' },  // Nacht – fast schwarz-grün
-  { p: 0.22, c: '#0e1e10' },  // Vor Morgen – sehr dunkel
-  { p: 0.27, c: '#5a3010' },  // Morgenröte – warmes Dunkelbraun
-  { p: 0.35, c: '#4a8830' },  // Morgen – frisches Grün
-  { p: 0.50, c: '#58a838' },  // Mittag – sattes helles Grün
-  { p: 0.60, c: '#509830' },  // Nachmittag
-  { p: 0.67, c: '#706020' },  // Goldene Stunde – Ocker
-  { p: 0.75, c: '#582010' },  // Sonnenuntergang – Dunkelrot
-  { p: 0.85, c: '#121808' },  // Dämmerung
-  { p: 1.00, c: '#0a1a0e' },
+  {p:0.00,c:'#0a1a0e'},{p:0.22,c:'#0e1e10'},{p:0.27,c:'#5a3010'},
+  {p:0.35,c:'#4a8830'},{p:0.50,c:'#58a838'},{p:0.60,c:'#509830'},
+  {p:0.67,c:'#706020'},{p:0.75,c:'#582010'},{p:0.85,c:'#121808'},{p:1.00,c:'#0a1a0e'},
 ];
-
 const PLANT_KEYS = [
-  { p: 0.00, c: '#081008' },
-  { p: 0.22, c: '#0c1808' },
-  { p: 0.27, c: '#482808' },
-  { p: 0.35, c: '#409030' },
-  { p: 0.50, c: '#50c040' },  // Mittag – lebendiges Grün
-  { p: 0.60, c: '#48a838' },
-  { p: 0.67, c: '#605018' },
-  { p: 0.75, c: '#481808' },
-  { p: 0.85, c: '#101008' },
-  { p: 1.00, c: '#081008' },
+  {p:0.00,c:'#081008'},{p:0.22,c:'#0c1808'},{p:0.27,c:'#482808'},
+  {p:0.35,c:'#409030'},{p:0.50,c:'#50c040'},{p:0.60,c:'#48a838'},
+  {p:0.67,c:'#605018'},{p:0.75,c:'#481808'},{p:0.85,c:'#101008'},{p:1.00,c:'#081008'},
 ];
 
-// Body-Hintergrund = untere Himmelsfarbe für nahtlosen Übergang
-const BGBODY_KEYS = [
-  { p: 0.00, c: '#141c50' },
-  { p: 0.22, c: '#18206a' },
-  { p: 0.27, c: '#c06040' },
-  { p: 0.33, c: '#f0b860' },
-  { p: 0.40, c: '#90cef0' },
-  { p: 0.50, c: '#60b0e8' },
-  { p: 0.60, c: '#70b8ec' },
-  { p: 0.67, c: '#f0b860' },
-  { p: 0.73, c: '#d06040' },
-  { p: 0.80, c: '#201030' },
-  { p: 0.88, c: '#141848' },
-  { p: 1.00, c: '#141c50' },
-];
+function hexToRgb(hex) { const n=parseInt(hex.replace('#',''),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function lerpHex(a,b,t) {
+  const [ar,ag,ab]=hexToRgb(a),[br,bg,bb]=hexToRgb(b);
+  const l=(x,y)=>Math.round(Math.max(0,Math.min(255,x+(y-x)*t)));
+  return '#'+[l(ar,br),l(ag,bg),l(ab,bb)].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
 
-// Interpoliert zwischen Keyframes basierend auf phase (0..1)
 function _sampleKeys(keys, phase) {
-  for (let i = 0; i < keys.length - 1; i++) {
-    const a = keys[i], b = keys[i + 1];
-    if (phase >= a.p && phase <= b.p) {
-      const t = (phase - a.p) / (b.p - a.p);
-      // Farb-Key hat entweder .c oder .top/.bot
-      if (a.c !== undefined) return lerpHex(a.c, b.c, t);
-      return [lerpHex(a.top, b.top, t), lerpHex(a.bot, b.bot, t)];
+  for (let i=0;i<keys.length-1;i++) {
+    const a=keys[i],b=keys[i+1];
+    if (phase>=a.p&&phase<=b.p) {
+      const t=(phase-a.p)/(b.p-a.p);
+      return a.c!==undefined ? lerpHex(a.c,b.c,t) : [lerpHex(a.top,b.top,t),lerpHex(a.bot,b.bot,t)];
     }
   }
-  return keys[0].c || [keys[0].top, keys[0].bot];
+  return keys[0].c||[keys[0].top,keys[0].bot];
 }
 
-function randNext() { return Math.floor(Math.random() * (MAX_DROP_ANIMAL_INDEX + 1)); }
-
-function hexToRgb(hex) {
-  const n = parseInt(hex.replace('#',''), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+function getDayPhase() {
+  return ((Date.now()-_dayCycleStart)/1000 % DAY_CYCLE_SECONDS) / DAY_CYCLE_SECONDS;
 }
 
-function lerpHex(a, b, t) {
-  const [ar, ag, ab] = hexToRgb(a);
-  const [br, bg, bb] = hexToRgb(b);
-  const lerp = (x, y) => Math.round(Math.max(0, Math.min(255, x + (y - x) * t)));
-  return '#' + [lerp(ar, br), lerp(ag, bg), lerp(ab, bb)]
-    .map(v => v.toString(16).padStart(2, '0')).join('');
-}
+// ── Hintergrund-Canvas ───────────────────────────────────────────────────────
+// ── Sternsystem ──────────────────────────────────────────────────────────────
+// Einmalig generiert beim Laden – zufällige Positionen, Größen, Farben, Phasen
+const _STARS = (function() {
+  // Seeded pseudo-random für reproduzierbare aber schöne Verteilung
+  let seed = 42;
+  const rng = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
 
-function vibrate(duration = 10) {
-  if (!navigator.vibrate) return;
-  navigator.vibrate(duration);
-}
+  const stars = [];
+  // 120 Sterne in 3 Kategorien: hell, mittel, schwach
+  const configs = [
+    { count: 15, rMin: 1.4, rMax: 2.2, brightness: [0.7, 1.0], flickerSpeed: [0.8, 1.8],  flickerDepth: [0.25, 0.45] }, // Hauptsterne
+    { count: 40, rMin: 0.8, rMax: 1.5, brightness: [0.4, 0.8], flickerSpeed: [1.2, 2.8],  flickerDepth: [0.15, 0.35] }, // Mittelhell
+    { count: 65, rMin: 0.4, rMax: 0.9, brightness: [0.2, 0.5], flickerSpeed: [1.8, 4.0],  flickerDepth: [0.08, 0.20] }, // Hintergrundsterne
+  ];
 
-// ========================================
-// PREVIEW-CANVAS
-// ========================================
-const previewCanvas = document.getElementById('preview-canvas');
-// Scharf auf Retina/HiDPI-Displays
-(function setupPreviewCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  const size = 48;
-  previewCanvas.width  = size * dpr;
-  previewCanvas.height = size * dpr;
-  previewCanvas.style.width  = size + 'px';
-  previewCanvas.style.height = size + 'px';
+  for (const cfg of configs) {
+    for (let i = 0; i < cfg.count; i++) {
+      // Gleichmäßige Verteilung über den Himmelsbereich (oben 55% des Bildschirms)
+      // Mit leichter Häufung Richtung Horizont (Milchstraßen-Effekt)
+      const yRaw = rng();
+      const yFrac = yRaw * yRaw * 0.55; // quadratisch → mehr Sterne oben
+      const xFrac = rng();
+
+      // Sternfarbe: von warmweiß über weiß zu kaltblau
+      const colorRoll = rng();
+      const color = colorRoll < 0.2  ? [255, 240, 200]  // Warmweiß (K-Stern)
+                  : colorRoll < 0.55 ? [255, 255, 255]  // Reinweiß (G-Stern)
+                  : colorRoll < 0.80 ? [220, 235, 255]  // Hellblau (A-Stern)
+                  :                    [180, 210, 255];  // Kaltblau (B-Stern)
+
+      stars.push({
+        xFrac,
+        yFrac,
+        r: cfg.rMin + rng() * (cfg.rMax - cfg.rMin),
+        baseBrightness: cfg.brightness[0] + rng() * (cfg.brightness[1] - cfg.brightness[0]),
+        flickerSpeed:   cfg.flickerSpeed[0]  + rng() * (cfg.flickerSpeed[1]  - cfg.flickerSpeed[0]),
+        flickerDepth:   cfg.flickerDepth[0]  + rng() * (cfg.flickerDepth[1]  - cfg.flickerDepth[0]),
+        flickerPhase:   rng() * Math.PI * 2, // jeder Stern flackert versetzt
+        color,
+      });
+    }
+  }
+  return stars;
 })();
-const pctx = previewCanvas.getContext('2d');
-pctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
 
-function drawPreview(type) {
-  const logicalSize = 48;
-  pctx.clearRect(0, 0, logicalSize, logicalSize);
-  const a  = ANIMALS[type];
-  const r  = Math.max(1, Math.min(a.r / SCALE_FACTOR, 20)); // guard: nie <= 0
-  const cx = logicalSize / 2;
-  const cy = logicalSize / 2;
-  pctx.save();
-  pctx.translate(cx, cy);
+function _drawStars(ctx, W2, H2, nightAlpha, time) {
+  if (nightAlpha <= 0.01) return;
+  ctx.save();
+  for (const s of _STARS) {
+    // Flackern: Kombination aus zwei Sinuswellen unterschiedlicher Frequenz → unregelmäßig
+    const flicker = 1
+      - s.flickerDepth * (
+          0.6 * Math.sin(time * s.flickerSpeed + s.flickerPhase)
+        + 0.4 * Math.sin(time * s.flickerSpeed * 1.7 + s.flickerPhase * 0.5)
+      );
+    const alpha = nightAlpha * s.baseBrightness * flicker;
+    if (alpha < 0.02) continue;
 
-  // Ball fill
-  pctx.beginPath();
-  pctx.arc(0, 0, r, 0, Math.PI * 2);
-  const hexColor = '#' + a.color.toString(16).padStart(6, '0');
-  pctx.fillStyle = hexColor;
-  pctx.fill();
+    const x = s.xFrac * W2;
+    const y = s.yFrac * H2;
 
-  // Colored border matching ball color (darker, saturated shade via HSL)
-  const borderColor32 = _borderColorFor(a.color);
-  const br32 = (borderColor32 >> 16) & 0xff;
-  const bg32 = (borderColor32 >> 8) & 0xff;
-  const bb32 =  borderColor32 & 0xff;
-  pctx.lineWidth = Math.max(1, r * 0.1);
-  pctx.strokeStyle = `rgb(${br32},${bg32},${bb32})`;
-  pctx.stroke();
+    // Leuchtschimmer um helle Sterne
+    if (s.r > 1.2 && alpha > 0.4) {
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, s.r * 4);
+      glow.addColorStop(0, `rgba(${s.color[0]},${s.color[1]},${s.color[2]},${alpha * 0.35})`);
+      glow.addColorStop(1, `rgba(${s.color[0]},${s.color[1]},${s.color[2]},0)`);
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(x, y, s.r * 4, 0, Math.PI * 2); ctx.fill();
+    }
 
-  pctx.font = `${Math.floor(r * 1.35)}px serif`;
-  pctx.textAlign = 'center';
-  pctx.textBaseline = 'middle';
-  pctx.fillText(a.emoji, 0, 1);
-  pctx.restore();
+    // Sternkern
+    ctx.fillStyle = `rgba(${s.color[0]},${s.color[1]},${s.color[2]},${Math.min(1, alpha)})`;
+    ctx.beginPath(); ctx.arc(x, y, s.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
 }
 
-// ========================================
-// SCORE & HINTERGRUND
-// ========================================
-let _currentScore = 0;
+let _gbcPhase = 0.5;
+let _gbcSky0 = '#1878c8';
+let _gbcSky1 = '#60b0e8';
+let _gbcHills = '#58a838';
+let _gbcPlants = '#50c040';
 
-function updateScore(score) {
-  _currentScore = score;
-  document.getElementById('score-val').textContent = score;
-  // Kein Biom-Musikwechsel mehr – Tempo wird allein durch Stapelhöhe gesteuert
-}
-
-// Body-Hintergrundfarbe wird direkt aus dem Tageszyklus berechnet
-let _bgBodyColor = '#141c50';
-let _bgLerpSky0  = '#0b1035';
-let _bgLerpSky1  = '#141c50';
-
-// ── Spiel-Hintergrund-Canvas (hinter dem Spielfeld) ──────────────────────────
-let _gbcCtx     = null;
-let _gbcTime    = 0;
-let _gbcHills   = '#4a8830';
-let _gbcPlants  = '#50c040';
+let _gbcTime = 0;
+let _gbcCtx = null;
+let _gbcFrame = null;
 let _gbcRunning = false;
-let _gbcFrame   = null;
 
-function _getGbcCtx() {
-  if (_gbcCtx) return _gbcCtx;
-  const c = document.getElementById('game-bg-canvas');
-  if (!c) return null;
-  _gbcCtx = c.getContext('2d');
-  return _gbcCtx;
-}
 
 function _resizeGbc() {
-  const c = document.getElementById('game-bg-canvas');
+  const c=document.getElementById('game-bg-canvas');
   if (!c) return;
-  c.width  = window.innerWidth;
-  c.height = window.innerHeight;
-  _gbcCtx  = null; // reset so context is re-fetched
+  c.width=window.innerWidth; c.height=window.innerHeight; _gbcCtx=null;
 }
 
 function _drawGbc() {
+  
   if (!_gbcRunning) return;
-  const c = document.getElementById('game-bg-canvas');
+  const c=document.getElementById('game-bg-canvas');
   if (!c) return;
-  const ctx = _getGbcCtx();
-  if (!ctx) return;
-  const W2 = c.width, H2 = c.height;
+  if (!_gbcCtx) _gbcCtx=c.getContext('2d');
+  const W2=c.width, H2=c.height;
+  _gbcCtx.clearRect(0,0,W2,H2);
+  _gbcTime+=0.004;
 
-  _gbcTime += 0.004;
+  const phase=getDayPhase();
+  const spd=0.008;
+  const sky=_sampleKeys(SKY_KEYS,phase);
+  _gbcSky0=lerpHex(_gbcSky0,sky[0],spd);
+  _gbcSky1=lerpHex(_gbcSky1,sky[1],spd);
+  _gbcHills=lerpHex(_gbcHills,_sampleKeys(HILL_KEYS,phase),spd);
+  _gbcPlants=lerpHex(_gbcPlants,_sampleKeys(PLANT_KEYS,phase),spd);
+  _gbcPhase=phase;
 
-  // Sync hill/plant colors with game field
-  _gbcHills  = _bgLerpSky0; // will use separate lerp below
-  _gbcPlants = _bgLerpSky1;
+  const grad=_gbcCtx.createLinearGradient(0,0,0,H2);
+  grad.addColorStop(0,_gbcSky0); grad.addColorStop(0.75,_gbcSky1); grad.addColorStop(1,_gbcSky1);
+  _gbcCtx.fillStyle=grad; _gbcCtx.fillRect(0,0,W2,H2);
 
-  ctx.clearRect(0, 0, W2, H2);
-
-  // Sky gradient – identical to game field
-  const grad = ctx.createLinearGradient(0, 0, 0, H2);
-  grad.addColorStop(0,    _bgLerpSky0);
-  grad.addColorStop(0.75, _bgLerpSky1);
-  grad.addColorStop(1,    _bgLerpSky1);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W2, H2);
-
-  // Stars (night)
-  const phase = _gbcLastPhase || 0.5;
-  if (phase < 0.30 || phase > 0.75) {
-    const starA = phase < 0.30
-      ? Math.min(1, (0.30 - phase) * 8)
-      : Math.min(1, (phase - 0.75) * 8);
-    ctx.fillStyle = `rgba(255,255,255,${starA * 0.8})`;
-    for (let i = 0; i < 60; i++) {
-      const sx = ((i * 137.5) % 1) * W2;
-      const sy = ((i * 97.3)  % 1) * H2 * 0.55;
-      const sr = 0.5 + (i % 3) * 0.5;
-      ctx.beginPath();
-      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  // Sterne – schönes Flacker-System
+  if (phase < 0.32 || phase > 0.72) {
+    const nightAlpha = phase < 0.32
+      ? Math.min(1, (0.32 - phase) * 7)
+      : Math.min(1, (phase - 0.72) * 7);
+    _drawStars(_gbcCtx, W2, H2, nightAlpha, _gbcTime);
   }
 
-  // Clouds (day)
-  if (phase > 0.35 && phase < 0.65) {
-    const ca = Math.min(1, Math.min(phase - 0.35, 0.65 - phase) * 12) * 0.45;
-    if (ca > 0.01) {
-      const clouds = [
-        { xOff: 0,   yFrac: 0.04, r: 22, spd: 1.0, puffs: [[0,0,1],[14,-5,0.72],[28,0,0.55]] },
-        { xOff: 220, yFrac: 0.09, r: 16, spd: 0.7, puffs: [[0,0,1],[12,-4,0.8],[24,0,0.6],[-6,3,0.45]] },
-        { xOff: 420, yFrac: 0.05, r: 12, spd: 1.4, puffs: [[0,0,1],[9,-3,0.7],[18,0,0.5]] },
-        { xOff: 620, yFrac: 0.12, r: 19, spd: 0.9, puffs: [[0,0,1],[15,-5,0.75],[30,2,0.6],[22,-2,0.42]] },
-        { xOff: 820, yFrac: 0.03, r: 14, spd: 1.2, puffs: [[0,0,1],[11,-4,0.68],[22,1,0.50]] },
-        { xOff: 140, yFrac: 0.14, r: 10, spd: 1.6, puffs: [[0,0,1],[8,-3,0.65],[16,0,0.48]] },
+  // Wolken
+  if (phase>0.35&&phase<0.65) {
+    const ca=Math.min(1,Math.min(phase-0.35,0.65-phase)*12)*.45;
+    if (ca>0.01) {
+      const clouds=[
+        {xOff:0,yFrac:.04,r:22,spd:1.0,puffs:[[0,0,1],[14,-5,.72],[28,0,.55]]},
+        {xOff:220,yFrac:.09,r:16,spd:.7,puffs:[[0,0,1],[12,-4,.8],[24,0,.6],[-6,3,.45]]},
+        {xOff:420,yFrac:.05,r:12,spd:1.4,puffs:[[0,0,1],[9,-3,.7],[18,0,.5]]},
+        {xOff:620,yFrac:.12,r:19,spd:.9,puffs:[[0,0,1],[15,-5,.75],[30,2,.6],[22,-2,.42]]},
       ];
-      ctx.fillStyle = `rgba(255,255,255,${ca})`;
+      _gbcCtx.fillStyle=`rgba(255,255,255,${ca})`;
       for (const cl of clouds) {
-        const totalW = W2 + 300;
-        const cx2 = ((cl.xOff + _gbcTime * cl.spd * 20) % totalW) - 80;
-        const cy2 = cl.yFrac * H2;
-        ctx.beginPath();
-        for (const [dx, dy, rs] of cl.puffs) {
-          const r = cl.r * (W2 / 420);
-          ctx.moveTo(cx2 + dx * (W2/420) + rs * r, cy2 + dy * (H2/580));
-          ctx.arc(cx2 + dx * (W2/420), cy2 + dy * (H2/580), Math.max(0.1, rs * r), 0, Math.PI * 2);
+        const cx2=((cl.xOff+_gbcTime*cl.spd*20)%(W2+300))-80, cy2=cl.yFrac*H2;
+        _gbcCtx.beginPath();
+        for (const [dx,dy,rs] of cl.puffs) {
+          _gbcCtx.arc(cx2+dx*(W2/420),cy2+dy*(H2/580),Math.max(.1,rs*cl.r*(W2/420)),0,Math.PI*2);
         }
-        ctx.fill();
+        _gbcCtx.fill();
       }
     }
   }
 
-  // Hills back
-  const hillColor = _gbcLerpHills  || '#4a8830';
-  ctx.save();
-  ctx.globalAlpha = 0.92;
-  ctx.fillStyle = hillColor;
-  ctx.beginPath();
-  ctx.moveTo(0, H2);
-  const hh = H2 * 0.22;
-  for (let x = 0; x <= W2; x += 4) {
-    const y = H2 - hh
-      + Math.sin(x * 0.013 + _gbcTime * 0.65) * H2 * 0.022
-      + Math.sin(x * 0.005 + _gbcTime * 0.26) * H2 * 0.012;
-    ctx.lineTo(x, y);
+  // Hügel hinten
+  _gbcCtx.save(); _gbcCtx.globalAlpha=.92; _gbcCtx.fillStyle=_gbcHills;
+  _gbcCtx.beginPath(); _gbcCtx.moveTo(0,H2);
+  for (let x=0;x<=W2;x+=4) {
+    _gbcCtx.lineTo(x,H2-H2*.22+Math.sin(x*.013+_gbcTime*.65)*H2*.022+Math.sin(x*.005+_gbcTime*.26)*H2*.012);
   }
-  ctx.lineTo(W2, H2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+  _gbcCtx.lineTo(W2,H2); _gbcCtx.closePath(); _gbcCtx.fill(); _gbcCtx.restore();
 
-  // Hills front
-  const plantColor = _gbcLerpPlants || '#50c040';
-  ctx.save();
-  ctx.fillStyle = plantColor;
-  ctx.beginPath();
-  ctx.moveTo(0, H2);
-  const ph2h = H2 * 0.14;
-  for (let x = 0; x <= W2; x += 4) {
-    const y = H2 - ph2h
-      + Math.sin(x * 0.015 + _gbcTime * 1.15) * H2 * 0.018
-      + Math.sin(x * 0.009 + _gbcTime * 0.40) * H2 * 0.010;
-    ctx.lineTo(x, y);
+  // Hügel vorne
+  _gbcCtx.save(); _gbcCtx.fillStyle=_gbcPlants;
+  _gbcCtx.beginPath(); _gbcCtx.moveTo(0,H2);
+  for (let x=0;x<=W2;x+=4) {
+    _gbcCtx.lineTo(x,H2-H2*.14+Math.sin(x*.015+_gbcTime*1.15)*H2*.018+Math.sin(x*.009+_gbcTime*.40)*H2*.010);
   }
-  ctx.lineTo(W2, H2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+  _gbcCtx.lineTo(W2,H2); _gbcCtx.closePath(); _gbcCtx.fill(); _gbcCtx.restore();
 
-  _gbcFrame = requestAnimationFrame(_drawGbc);
+  _gbcFrame=requestAnimationFrame(_drawGbc);
 }
-
-let _gbcLastPhase  = 0.5;
-let _gbcLerpHills  = '#4a8830';
-let _gbcLerpPlants = '#50c040';
 
 function startGameBgCanvas() {
-  const c = document.getElementById('game-bg-canvas');
-  if (!c) return;
-  c.style.display = 'block';
-  _resizeGbc();
-  window.addEventListener('resize', _resizeGbc);
-  _gbcRunning = true;
-  if (_gbcFrame) cancelAnimationFrame(_gbcFrame);
-  _gbcFrame = requestAnimationFrame(_drawGbc);
+  // Canvas läuft bereits seit DOMContentLoaded – nur z-index absenken
+  // damit Phaser und UI darüber gerendert werden können
+  const c=document.getElementById('game-bg-canvas');
+  if (c) c.style.zIndex='0';
 }
 
-// Wird jeden Frame aus Background.draw() aufgerufen
-function tickBodyBackground(score, speed) {
-  const phase = getDayPhase(score);
-  _gbcLastPhase = phase;
-  const sky = _sampleKeys(SKY_KEYS, phase);
-  _bgLerpSky0 = lerpHex(_bgLerpSky0, sky[0], speed);
-  _bgLerpSky1 = lerpHex(_bgLerpSky1, sky[1], speed);
-  _gbcLerpHills  = lerpHex(_gbcLerpHills,  _sampleKeys(HILL_KEYS,  phase), speed);
-  _gbcLerpPlants = lerpHex(_gbcLerpPlants, _sampleKeys(PLANT_KEYS, phase), speed);
-  _bgBodyColor = _bgLerpSky1;
-  // Body transparent – game-bg-canvas übernimmt den Hintergrund
-  document.body.style.background = 'transparent';
+// ── Utility ──────────────────────────────────────────────────────────────────
+function randNext() { return Math.floor(Math.random()*(MAX_DROP_ANIMAL_INDEX+1)); }
+function vibrate(d=10) { navigator.vibrate?.(d); }
+
+// ── Preview Canvas ───────────────────────────────────────────────────────────
+const previewCanvas=document.getElementById('preview-canvas');
+const pctx=previewCanvas.getContext('2d');
+const dprP=window.devicePixelRatio||1;
+previewCanvas.width=previewCanvas.height=48*dprP;
+previewCanvas.style.width=previewCanvas.style.height='48px';
+pctx.scale(dprP,dprP);
+
+function drawPreview(type) {
+  pctx.clearRect(0,0,48,48);
+  const a=ANIMALS[type], r=Math.max(1,Math.min(a.r/SCALE_FACTOR,20));
+  pctx.save(); pctx.translate(24,24);
+  pctx.beginPath(); pctx.arc(0,0,r,0,Math.PI*2);
+  pctx.fillStyle='#'+a.color.toString(16).padStart(6,'0'); pctx.fill();
+  const bc=_borderColor(a.color);
+  pctx.strokeStyle=`rgb(${(bc>>16)&0xff},${(bc>>8)&0xff},${bc&0xff})`;
+  pctx.lineWidth=Math.max(1,r*.1); pctx.stroke();
+  pctx.font=`${Math.floor(r*1.35)}px serif`;
+  pctx.textAlign='center'; pctx.textBaseline='middle';
+  pctx.fillText(a.emoji,0,1); pctx.restore();
 }
 
-// Einmalig beim Start / Reset aufrufen
-function updateDynamicBackground(score) {
-  const phase = getDayPhase(score);
-  const sky = _sampleKeys(SKY_KEYS, phase);
-  _bgLerpSky0  = sky[0];
-  _bgLerpSky1  = sky[1];
-  _gbcLerpHills  = _sampleKeys(HILL_KEYS,  phase);
-  _gbcLerpPlants = _sampleKeys(PLANT_KEYS, phase);
-  _gbcLastPhase  = phase;
-  _bgBodyColor = sky[1];
-  document.body.style.background = 'transparent';
-}
+// ── Score ────────────────────────────────────────────────────────────────────
+function updateScore(score) { document.getElementById('score-val').textContent=score; }
 
-// ========================================
-// MERGE-BAR
-// ========================================
-const mergeBar   = document.getElementById('merge-bar');
-const mergeCells = [];
-const flashTimers = {};
+// ── Merge-Bar ────────────────────────────────────────────────────────────────
+const mergeBar=document.getElementById('merge-bar');
+const mergeCells=[], flashTimers={};
 
 function initMergeBar() {
-  mergeBar.innerHTML = '';
-  mergeCells.length = 0;
-
-  const barWidth  = mergeBar.offsetWidth || 380; // Fallback wenn noch nicht im DOM
-  const cellSize  = Math.max(8, Math.floor((barWidth - 20 - 9 * 3) / 10));
-
-  ANIMALS.forEach((a, i) => {
-    const cell = document.createElement('div');
-    cell.className = 'merge-cell';
-    cell.id = 'mc-' + i;
-
-    const cv    = document.createElement('canvas');
-    const dpr   = window.devicePixelRatio || 1;
-    cv.width    = cellSize * dpr;
-    cv.height   = cellSize * dpr;
-    cv.style.width  = cellSize + 'px';
-    cv.style.height = cellSize + 'px';
-
-    const arrow = document.createElement('span');
-    arrow.className = 'merge-arrow';
-    arrow.textContent = '▶';
-
-    cell.appendChild(cv);
-    cell.appendChild(arrow);
-    mergeBar.appendChild(cell);
-
-    const ctx = cv.getContext('2d');
-    ctx.scale(dpr, dpr);
-    mergeCells.push({ canvas: cv, ctx, cell, size: cellSize });
-    drawMergeCell(i, cellSize, ctx);
+  mergeBar.innerHTML=''; mergeCells.length=0;
+  const cellSize=Math.max(8,Math.floor((mergeBar.offsetWidth||380-20-9*3)/10));
+  const dpr=window.devicePixelRatio||1;
+  ANIMALS.forEach((a,i)=>{
+    const cell=document.createElement('div'); cell.className='merge-cell'; cell.id='mc-'+i;
+    const cv=document.createElement('canvas');
+    cv.width=cv.height=cellSize*dpr;
+    cv.style.width=cv.style.height=cellSize+'px';
+    const arrow=document.createElement('span'); arrow.className='merge-arrow'; arrow.textContent='▶';
+    cell.append(cv,arrow); mergeBar.appendChild(cell);
+    const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+    mergeCells.push({canvas:cv,ctx,cell,size:cellSize});
+    _drawMergeCell(i,cellSize,ctx);
   });
 }
 
-function drawMergeCell(i, size, ctx) {
-  const a  = ANIMALS[i];
-  const cx = size / 2;
-  const cy = size / 2;
-  const r  = Math.max(1, size * 0.42);  // Guard: nie negativ/0
-
-  if (size <= 0) return;
-  ctx.clearRect(0, 0, size, size);
-
-  // Fill
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = '#' + a.color.toString(16).padStart(6, '0');
-  ctx.fill();
-
-  // Farbiger Rand mit echtem Kontrast
-  const borderColor32 = _borderColorFor(a.color);
-  const borderR = (borderColor32 >> 16) & 0xff;
-  const borderG = (borderColor32 >> 8) & 0xff;
-  const borderB =  borderColor32 & 0xff;
-  ctx.lineWidth = Math.max(1, r * 0.1);
-  ctx.strokeStyle = `rgb(${borderR},${borderG},${borderB})`;
-  ctx.stroke();
-
-  const fontSize = Math.round(r * 1.6);
-  ctx.font = `${fontSize}px serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0,0,0,0.35)';
-  ctx.shadowBlur = Math.max(1, r * 0.15);
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 1;
-  ctx.fillStyle = 'white'; // Emojis ignorieren fillStyle, aber weiß ist sicherer Fallback
-  ctx.fillText(a.emoji, cx, cy + 1);
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
+function _drawMergeCell(i,size,ctx) {
+  const a=ANIMALS[i], cx=cy=size/2, r=Math.max(1,size*.42);
+  ctx.clearRect(0,0,size,size);
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle='#'+a.color.toString(16).padStart(6,'0'); ctx.fill();
+  const bc=_borderColor(a.color);
+  ctx.strokeStyle=`rgb(${(bc>>16)&0xff},${(bc>>8)&0xff},${bc&0xff})`;
+  ctx.lineWidth=Math.max(1,r*.1); ctx.stroke();
+  ctx.font=`${Math.round(r*1.6)}px serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=Math.max(1,r*.15); ctx.shadowOffsetY=1;
+  ctx.fillText(a.emoji,cx,cy+1);
+  ctx.shadowColor='transparent'; ctx.shadowBlur=ctx.shadowOffsetY=0;
 }
 
 function flashMergeCell(i) {
-  const { cell, canvas } = mergeCells[i];
-  // Farbe des gemergten Tieres als Glow-Farbe nutzen
-  const color = ANIMALS[i].color;
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8)  & 0xff;
-  const b =  color        & 0xff;
-  canvas.style.boxShadow = `0 0 12px 5px rgba(${r},${g},${b},0.95)`;
-  canvas.style.transform = 'scale(1.18)';
-  cell.classList.add('just-merged');
+  const {cell,canvas}=mergeCells[i], c=ANIMALS[i].color;
+  canvas.style.boxShadow=`0 0 12px 5px rgba(${(c>>16)&0xff},${(c>>8)&0xff},${c&0xff},.95)`;
+  canvas.style.transform='scale(1.18)'; cell.classList.add('just-merged');
   if (flashTimers[i]) clearTimeout(flashTimers[i]);
-  flashTimers[i] = setTimeout(() => {
-    cell.classList.remove('just-merged');
-    canvas.style.boxShadow = '';
-    canvas.style.transform = '';
-  }, 600);
+  flashTimers[i]=setTimeout(()=>{
+    cell.classList.remove('just-merged'); canvas.style.boxShadow=canvas.style.transform='';
+  },600);
 }
 
-// ========================================
-// MENÜ
-// ========================================
-const menuOverlay = document.getElementById('menu-overlay');
-const menuMuteBtn = document.getElementById('menu-mute');
+// ── Menü ─────────────────────────────────────────────────────────────────────
+const menuOverlay=document.getElementById('menu-overlay');
+const menuMuteBtn=document.getElementById('menu-mute');
 
-document.getElementById('gear-btn').onclick = () => {
-  vibrate(10);
-  menuOverlay.classList.add('open');
-};
+document.getElementById('gear-btn').onclick=()=>{ vibrate(10); menuOverlay.classList.add('open'); };
+document.getElementById('menu-close').onclick=()=>{ vibrate(10); menuOverlay.classList.remove('open'); };
+menuOverlay.addEventListener('click',e=>{ if(e.target===menuOverlay){vibrate(10);menuOverlay.classList.remove('open');}});
 
-document.getElementById('menu-close').onclick = () => {
-  vibrate(10);
-  menuOverlay.classList.remove('open');
-};
-
-menuOverlay.addEventListener('click', e => {
-  if (e.target === menuOverlay) {
-    vibrate(10);
-    menuOverlay.classList.remove('open');
-  }
-});
-
-function updateMuteLabel() {
-  menuMuteBtn.innerHTML = (muted ? '🔇' : '🔊') + '&nbsp; Sound ' + (muted ? 'aus' : 'an');
-}
+function updateMuteLabel() { menuMuteBtn.innerHTML=(muted?'🔇':'🔊')+'&nbsp; Sound '+(muted?'aus':'an'); }
 updateMuteLabel();
+menuMuteBtn.onclick=()=>{ vibrate(10); muted=!muted; updateMuteLabel(); muted?stopBgMusic():startBgMusic(); };
 
-menuMuteBtn.onclick = () => {
-  vibrate(10);
-  muted = !muted;
-  updateMuteLabel();
-  if (muted) stopBgMusic();
-  else       startBgMusic();
-};
-
-// Lautstärkeregler
-document.getElementById('slider-music').addEventListener('input', function() {
-  musicVolume = this.value / 100;
-  document.getElementById('label-music').textContent = this.value + '%';
-  if (_masterGain) {
-    const ctx = getAudioCtx();
-    _masterGain.gain.cancelScheduledValues(ctx.currentTime);
-    _masterGain.gain.setValueAtTime(muted ? 0 : musicVolume, ctx.currentTime);
-  }
+document.getElementById('slider-music').addEventListener('input',function(){
+  musicVolume=this.value/100; document.getElementById('label-music').textContent=this.value+'%';
+  if (_masterGain) { const c=getAudioCtx(); _masterGain.gain.setValueAtTime(muted?0:musicVolume,c.currentTime); }
+});
+document.getElementById('slider-sfx').addEventListener('input',function(){
+  sfxVolume=this.value/100; document.getElementById('label-sfx').textContent=this.value+'%';
 });
 
-document.getElementById('slider-sfx').addEventListener('input', function() {
-  sfxVolume = this.value / 100;
-  document.getElementById('label-sfx').textContent = this.value + '%';
-});
-
-// Musik-Titel-Auswahl
 function buildMusicTrackGrid() {
-  const grid = document.getElementById('music-track-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  Object.entries(MUSIC_TRACKS).forEach(([key, track]) => {
-    const btn = document.createElement('div');
-    btn.style.cssText = `
-      display:flex; flex-direction:column; align-items:center; gap:4px;
-      padding:8px 4px; border-radius:10px; cursor:pointer; touch-action:manipulation;
-      border:1.5px solid ${key === _activeTrackKey ? 'rgba(255,220,80,0.8)' : 'rgba(255,255,255,0.12)'};
-      background:${key === _activeTrackKey ? 'rgba(255,220,80,0.14)' : 'rgba(255,255,255,0.06)'};
-      transition:all 0.15s; min-height:54px;
-    `;
-    btn.innerHTML = `
-      <span style="font-size:20px;line-height:1">${track.icon}</span>
-      <span style="font-size:8px;opacity:${key === _activeTrackKey ? '1' : '0.65'};color:${key === _activeTrackKey ? '#ffd700' : '#fff'};text-align:center;line-height:1.2">${track.label}</span>
-    `;
-    btn.addEventListener('click', () => {
-      vibrate(8);
-      switchMusicTrack(key);
-      buildMusicTrackGrid(); // UI aktualisieren
-    });
+  const grid=document.getElementById('music-track-grid'); if(!grid) return;
+  grid.innerHTML='';
+  Object.entries(MUSIC_TRACKS).forEach(([key,track])=>{
+    const btn=document.createElement('div'), active=key===_activeTrackKey;
+    btn.style.cssText=`display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:10px;cursor:pointer;touch-action:manipulation;border:1.5px solid ${active?'rgba(255,220,80,.8)':'rgba(255,255,255,.12)'};background:${active?'rgba(255,220,80,.14)':'rgba(255,255,255,.06)'};transition:all .15s;min-height:54px`;
+    btn.innerHTML=`<span style="font-size:20px;line-height:1">${track.icon}</span><span style="font-size:8px;opacity:${active?1:.65};color:${active?'#ffd700':'#fff'};text-align:center;line-height:1.2">${track.label}</span>`;
+    btn.onclick=()=>{ vibrate(8); switchMusicTrack(key); buildMusicTrackGrid(); };
     grid.appendChild(btn);
   });
 }
 buildMusicTrackGrid();
 
-// ========================================
-// PHASER SCENE KLASSEN
-// ========================================
-class Background {
-  constructor(scene) {
-    this._scene  = scene;
-    this.time    = 0;
-    this._frame  = 0;
-    // Interpolierte Himmelsfarben – starten beim aktuellen Tageszyklus
-    const initPhase = getDayPhase(0);
-    const initSky   = _sampleKeys(SKY_KEYS, initPhase);
-    this.sky0    = initSky[0];
-    this.sky1    = initSky[1];
-    this.hills   = _sampleKeys(HILL_KEYS,  initPhase);
-    this.plants  = _sampleKeys(PLANT_KEYS, initPhase);
-    // Kamera vollständig transparent
-    scene.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
-  }
+// ── Kategorie-System ─────────────────────────────────────────────────────────
+let gameStarted=false, activeScene=null;
 
-  draw(score, delta) {
-    const dt  = Math.min(delta, 50) / (1000 / 60);
-    this.time += 0.004 * dt;
-    this._frame++;
+function buildCatGrid(containerId, onSelect) {
+  const grid=document.getElementById(containerId); if(!grid) return;
+  grid.innerHTML='';
+  Object.entries(EMOJI_CATEGORIES).forEach(([key,cat])=>{
+    const btn=document.createElement('div');
+    btn.className='cat-btn'+(key===activeCategory?' active':'');
+    btn.dataset.cat=key;
+    btn.innerHTML=`<span class="cat-icon">${cat.icon}</span><span class="cat-label">${cat.label}</span>`;
+    btn.onclick=()=>{ vibrate(8); onSelect(key); };
+    grid.appendChild(btn);
+  });
+}
 
-    const phase = getDayPhase(score);
-    const spd   = 0.010 * dt;
+function refreshCatGrids() {
+  document.querySelectorAll('.cat-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.cat===activeCategory));
+}
 
-    const skyTarget = _sampleKeys(SKY_KEYS, phase);
-    this.sky0   = lerpHex(this.sky0,   skyTarget[0], spd);
-    this.sky1   = lerpHex(this.sky1,   skyTarget[1], spd);
-    this.hills  = lerpHex(this.hills,  _sampleKeys(HILL_KEYS,  phase), spd);
-    this.plants = lerpHex(this.plants, _sampleKeys(PLANT_KEYS, phase), spd);
-    tickBodyBackground(score, spd);
-
-    // Spielfeld-Canvas ist transparent – game-bg-canvas zeichnet den Hintergrund
-    // Kamera-Hintergrund transparent lassen
-    // Kamera-Hintergrund jedes Frame auf transparent halten
-    if (this._scene && this._scene.cameras && this._scene.cameras.main) {
-      this._scene.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
-    }
-  }
-
-  _drawClouds(ctx, t, color) {
-    // Vordefinierte Wolken-Templates: [xOffset, yFrac, baseR, speed, puffs]
-    // puffs: relative Positionen [dx, dy, rScale] der einzelnen Wolken-Blasen
-    const clouds = [
-      { xOff: 0,   yFrac: 0.04, r: 9,  spd: 1.0, puffs: [[0,0,1],[0.8,-0.25,0.72],[1.65,0,0.55],[1.4,0.12,0.4]] },
-      { xOff: 110, yFrac: 0.09, r: 14, spd: 0.6, puffs: [[0,0,1],[0.9,-0.3,0.8],[1.9,0,0.65],[1.45,-0.08,0.5],[-0.5,0.05,0.45]] },
-      { xOff: 220, yFrac: 0.05, r: 7,  spd: 1.4, puffs: [[0,0,1],[0.75,-0.2,0.7],[1.5,0,0.5]] },
-      { xOff: 310, yFrac: 0.11, r: 11, spd: 0.8, puffs: [[0,0,1],[0.85,-0.28,0.78],[1.7,0.05,0.6],[0.4,0.1,0.42]] },
-      { xOff: 60,  yFrac: 0.13, r: 6,  spd: 1.6, puffs: [[0,0,1],[0.7,-0.18,0.65],[1.4,0,0.48]] },
-      { xOff: 170, yFrac: 0.02, r: 12, spd: 0.7, puffs: [[0,0,1],[0.95,-0.32,0.82],[1.85,0,0.62],[1.3,-0.1,0.45],[-0.4,0.08,0.38]] },
-    ];
-
-    ctx.fillStyle = color;
-    for (const c of clouds) {
-      const totalW = W + 200 * SCALE_FACTOR;
-      const x = ((c.xOff * SCALE_FACTOR + t * c.spd * 8 * SCALE_FACTOR) % totalW) - 60 * SCALE_FACTOR;
-      const y = c.yFrac * H;
-      const r = c.r * SCALE_FACTOR;
-      ctx.beginPath();
-      for (const [dx, dy, rs] of c.puffs) {
-        ctx.moveTo(x + dx * r + rs * r, y + dy * r);
-        const arcR5 = Math.max(0.1, rs * r);
-        ctx.arc(x + dx * r, y + dy * r, arcR5, 0, Math.PI * 2);
-      }
-      ctx.fill();
-    }
-  }
-
-  _hill(ctx, h, spd, color, alpha) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for (let x = 0; x <= W; x += 3 * SCALE_FACTOR) {
-      const y = H - h
-        + Math.sin(x * 0.017 / SCALE_FACTOR + this.time * spd) * 13 * SCALE_FACTOR
-        + Math.sin(x * 0.007 / SCALE_FACTOR + this.time * spd * 0.4) * 7 * SCALE_FACTOR;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(W, H);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+function applyCategory(key, scene) {
+  activeCategory=key; ANIMALS.length=0; getAnimals(key).forEach(a=>ANIMALS.push(a));
+  refreshCatGrids();
+  if (mergeBar.children.length>0) initMergeBar();
+  if (scene && !scene.gameOver) {
+    scene.ballMgr.refreshVisuals();
+    scene.currentType=randNext(); scene.nextType=randNext(); scene.canDrop=true;
+    drawPreview(scene.nextType);
   }
 }
 
-
+// ── Phaser Szenen ────────────────────────────────────────────────────────────
 class BallManager {
-  constructor(scene) {
-    this.scene = scene;
-    this.balls = [];
-  }
+  constructor(scene) { this.scene=scene; this.balls=[]; }
 
   drop(mouseX, type) {
-    const a = ANIMALS[type];
-    const x = Phaser.Math.Clamp(mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
-    const y = GAME_OVER_LINE - a.r; // Unterkante des Balls liegt auf der roten Linie
-    playDropSound();
-    vibrate(5);
-    return this.spawn(x, y, type, 0.3);
+    const a=ANIMALS[type];
+    const x=Phaser.Math.Clamp(mouseX, a.r+4*SCALE_FACTOR, W-a.r-4*SCALE_FACTOR);
+    playDropSound(); vibrate(5);
+    return this.spawn(x, GAME_OVER_LINE-a.r, type, 0.3);
   }
 
-  spawn(x, y, type, scale = 0.6) {
-    const a    = ANIMALS[type];
-    const body = this.scene.matter.add.circle(x, y, a.r, {
-      restitution:    0.18,
-      friction:       0.35,
-      frictionStatic: 0.40,
-      frictionAir:    0.012,
-      density:        0.0025,
-      slop:           0.01,
-      label:          'ball',
+  spawn(x, y, type, scale=0.6) {
+    const a=ANIMALS[type];
+    const body=this.scene.matter.add.circle(x,y,a.r,{
+      restitution:.18,friction:.35,frictionStatic:.40,frictionAir:.012,density:.0025,slop:.01,label:'ball'
     });
-    body._type      = type;
-    body._merged    = false;
-    body._spawnTime = Date.now();
+    body._type=type; body._merged=false; body._spawnTime=Date.now();
 
-    // Ball-Textur per offscreen Canvas mit echtem Anti-Aliasing rendern
-    const texKey = `ball_${type}`;
-    if (!this.scene.textures.exists(texKey)) {
-      const dpr  = Math.min(window.devicePixelRatio || 1, 2);
-      const r    = Math.max(4, a.r);  // mindestens 4px Radius
-      const size = Math.ceil(r * 2 + 6) * dpr;
-      const oc   = document.createElement('canvas');
-      oc.width   = size; oc.height = size;
-      const oc2  = oc.getContext('2d');
-      oc2.scale(dpr, dpr);
-      const cx = (size / dpr) / 2, cy = (size / dpr) / 2;
-      const bw   = Math.max(0.5, Math.min(r * 0.09, r * 0.25)); // Border nie > 25% des Radius
-      const fillR_val = Math.max(1, r - 0.5);
-      const strokeR   = Math.max(0.5, r - 0.5 - bw * 0.5);    // Guard: nie negativ
-      // Weicher Schatten-Glow
-      oc2.shadowColor = 'rgba(0,0,0,0.28)';
-      oc2.shadowBlur  = r * 0.25;
-      // Fill
-      const fillR = (a.color >> 16) & 0xff;
-      const fillG = (a.color >> 8)  & 0xff;
-      const fillB =  a.color        & 0xff;
-      oc2.fillStyle = `rgb(${fillR},${fillG},${fillB})`;
-      oc2.beginPath(); oc2.arc(cx, cy, fillR_val, 0, Math.PI * 2); oc2.fill();
-      // Border – sauber innen, kein Aliasing
-      oc2.shadowBlur  = 0;
-      const bc = _borderColorFor(a.color);
-      const br = (bc >> 16) & 0xff, bg2 = (bc >> 8) & 0xff, bb = bc & 0xff;
-      oc2.strokeStyle = `rgba(${br},${bg2},${bb},0.88)`;
-      oc2.lineWidth   = bw;
-      oc2.beginPath(); oc2.arc(cx, cy, strokeR, 0, Math.PI * 2); oc2.stroke();
-      this.scene.textures.addCanvas(texKey, oc);
-    }
+    const texKey=`ball_${type}`;
+    if (!this.scene.textures.exists(texKey)) this._makeTexture(texKey,a);
 
-    const sprite = this.scene.add.image(0, 0, texKey).setDisplaySize(a.r * 2 + 4, a.r * 2 + 4);
-    const label  = this.scene.add.text(0, 1, a.emoji, {
-      fontSize:   Math.floor(a.r * 1.4) + 'px',
-      fontFamily: 'serif',
-    }).setOrigin(0.5, 0.5);
-
-    const container = this.scene.add.container(x, y, [sprite, label]).setDepth(1).setScale(scale);
-    this.balls.push({ body, container, _scale: scale, _texKey: texKey });
+    const sprite=this.scene.add.image(0,0,texKey).setDisplaySize(a.r*2+4,a.r*2+4);
+    const label=this.scene.add.text(0,1,a.emoji,{fontSize:Math.floor(a.r*1.4)+'px',fontFamily:'serif'}).setOrigin(.5,.5);
+    const container=this.scene.add.container(x,y,[sprite,label]).setDepth(1).setScale(scale);
+    this.balls.push({body,container,_scale:scale});
     return body;
   }
 
-  remove(matterBody) {
-    const idx = this.balls.findIndex(b => b.body === matterBody);
-    if (idx === -1) return;
-    const b = this.balls[idx];
-    b.container.destroy();
-    try { this.scene.matter.world.remove(matterBody); } catch (_) {}
-    this.balls.splice(idx, 1);
+  _makeTexture(texKey, a) {
+    const dpr=Math.min(window.devicePixelRatio||1,2), r=Math.max(4,a.r);
+    const size=Math.ceil(r*2+6)*dpr;
+    const oc=document.createElement('canvas'); oc.width=oc.height=size;
+    const c=oc.getContext('2d'); c.scale(dpr,dpr);
+    const cx=size/dpr/2, bw=Math.max(.5,Math.min(r*.09,r*.25));
+    c.shadowColor='rgba(0,0,0,.28)'; c.shadowBlur=r*.25;
+    c.fillStyle=`rgb(${(a.color>>16)&0xff},${(a.color>>8)&0xff},${a.color&0xff})`;
+    c.beginPath(); c.arc(cx,cx,Math.max(1,r-.5),0,Math.PI*2); c.fill();
+    c.shadowBlur=0;
+    const bc=_borderColor(a.color);
+    c.strokeStyle=`rgba(${(bc>>16)&0xff},${(bc>>8)&0xff},${bc&0xff},.88)`;
+    c.lineWidth=bw; c.beginPath(); c.arc(cx,cx,Math.max(.5,r-.5-bw*.5),0,Math.PI*2); c.stroke();
+    this.scene.textures.addCanvas(texKey,oc);
+  }
+
+  remove(body) {
+    const idx=this.balls.findIndex(b=>b.body===body); if(idx===-1) return;
+    this.balls[idx].container.destroy();
+    try{this.scene.matter.world.remove(body);}catch(_){}
+    this.balls.splice(idx,1);
   }
 
   draw(delta) {
-    const dt = Math.min(delta || 16, 50) / (1000 / 60);
+    const dt=Math.min(delta||16,50)/(1000/60);
     for (const b of this.balls) {
       if (!b.body) continue;
-      b._scale = Math.min(1, b._scale + 0.05 * dt);
-      b.container.setPosition(b.body.position.x, b.body.position.y);
-      b.container.setScale(b._scale);
-      b.container.setRotation(b.body.angle);
+      b._scale=Math.min(1,b._scale+.05*dt);
+      b.container.setPosition(b.body.position.x,b.body.position.y).setScale(b._scale).setRotation(b.body.angle);
     }
-    // Tempo anpassen: hoeher der Stapel = schnellere Musik
     updateMusicTempo(this.balls);
   }
 
   clear() {
     for (const b of this.balls) {
       b.container.destroy();
-      try { this.scene.matter.world.remove(b.body); } catch (_) {}
+      try{this.scene.matter.world.remove(b.body);}catch(_){}
     }
-    this.balls = [];
-    // Ball-Texturen zurücksetzen (werden beim nächsten Spawn neu erzeugt)
-    for (let t = 0; t < 10; t++) {
-      const key = `ball_${t}`;
-      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
-    }
+    this.balls=[];
+    for (let t=0;t<10;t++){const k=`ball_${t}`;if(this.scene.textures.exists(k))this.scene.textures.remove(k);}
   }
 
   refreshVisuals() {
-    // Alle Ball-Texturen verwerfen (neue Kategorie → neue Farben)
-    for (let t = 0; t < 10; t++) {
-      const key = `ball_${t}`;
-      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
-    }
+    for (let t=0;t<10;t++){const k=`ball_${t}`;if(this.scene.textures.exists(k))this.scene.textures.remove(k);}
     for (const b of this.balls) {
       if (!b.body) continue;
-      const type = b.body._type;
-      const a    = ANIMALS[Math.min(type, ANIMALS.length - 1)];
-
-      // Neue Textur erzeugen
-      const texKey = `ball_${type}`;
-      if (!this.scene.textures.exists(texKey)) {
-        const dpr  = Math.min(window.devicePixelRatio || 1, 2);
-        const r    = Math.max(4, a.r);
-        const size = Math.ceil(r * 2 + 6) * dpr;
-        const oc   = document.createElement('canvas');
-        oc.width   = size; oc.height = size;
-        const oc2  = oc.getContext('2d');
-        oc2.scale(dpr, dpr);
-        const cx = (size / dpr) / 2, cy = (size / dpr) / 2;
-        const bw      = Math.max(0.5, Math.min(r * 0.09, r * 0.25));
-        const fillR_v = Math.max(1, r - 0.5);
-        const strokeR = Math.max(0.5, r - 0.5 - bw * 0.5);    // Guard: nie negativ
-        oc2.shadowColor = 'rgba(0,0,0,0.28)'; oc2.shadowBlur = r * 0.25;
-        const fillR = (a.color >> 16) & 0xff, fillG = (a.color >> 8) & 0xff, fillB = a.color & 0xff;
-        oc2.fillStyle = `rgb(${fillR},${fillG},${fillB})`;
-        oc2.beginPath(); oc2.arc(cx, cy, fillR_v, 0, Math.PI * 2); oc2.fill();
-        oc2.shadowBlur = 0;
-        const bw2 = bw;
-        const bc = _borderColorFor(a.color);
-        const br = (bc >> 16) & 0xff, bg2 = (bc >> 8) & 0xff, bb = bc & 0xff;
-        oc2.strokeStyle = `rgba(${br},${bg2},${bb},0.88)`; oc2.lineWidth = bw2;
-        oc2.beginPath(); oc2.arc(cx, cy, strokeR, 0, Math.PI * 2); oc2.stroke();
-        this.scene.textures.addCanvas(texKey, oc);
-      }
-
-      const sprite = b.container.list[0];
-      const label  = b.container.list[1];
-      if (sprite && sprite.setTexture) {
-        sprite.setTexture(texKey).setDisplaySize(a.r * 2 + 4, a.r * 2 + 4);
-      }
-      if (label && label.setText) {
-        label.setText(a.emoji).setFontSize(Math.floor(a.r * 1.4) + 'px');
-      }
+      const type=b.body._type, a=ANIMALS[Math.min(type,ANIMALS.length-1)];
+      const texKey=`ball_${type}`;
+      if (!this.scene.textures.exists(texKey)) this._makeTexture(texKey,a);
+      const [sprite,label]=b.container.list;
+      sprite?.setTexture(texKey).setDisplaySize(a.r*2+4,a.r*2+4);
+      label?.setText(a.emoji).setFontSize(Math.floor(a.r*1.4)+'px');
     }
   }
 
-  // Gibt zurueck: 'clear' | 'warning' | 'gameover'
   checkDangerState() {
-    const now = Date.now();
-    // Nach einem Merge: kurze Gnadenfrist damit neu entstandener Ball fallen kann
-    if (this._lastMergeTime && now - this._lastMergeTime < 600) return 'clear';
-
-    let dangerBall = false;
+    const now=Date.now();
+    if (this._lastMergeTime && now-this._lastMergeTime<600) return 'clear';
+    let danger=false;
     for (const b of this.balls) {
-      if (!b.body) continue;
-      // Frisch gespawnte Bälle ignorieren
-      if (now - b.body._spawnTime < 800) continue;
-      const ballRadius = ANIMALS[b.body._type].r;
-      const ballTop    = b.body.position.y - ballRadius;
-      const vel        = Math.hypot(b.body.velocity.x, b.body.velocity.y);
-      // Nur Bälle zählen die (a) über der Linie sind UND (b) nahezu zur Ruhe gekommen sind
-      // → verhindert False-Positives beim Fallen, zählt aber ruhende Stapel korrekt
-      if (ballTop < GAME_OVER_LINE && vel < 1.5) {
-        dangerBall = true;
-        break;
-      }
+      if (!b.body || now-b.body._spawnTime<800) continue;
+      if (Math.hypot(b.body.velocity.x,b.body.velocity.y)>1.5) continue;
+      if (b.body.position.y-ANIMALS[b.body._type].r<GAME_OVER_LINE){danger=true;break;}
     }
-
-    if (!dangerBall) {
-      this._dangerSince = null;
-      return 'clear';
-    }
-
-    if (!this._dangerSince) this._dangerSince = now;
-    const elapsed = now - this._dangerSince;
-
-    if (elapsed < 3000) return 'warning';
-    return 'gameover';
+    if (!danger) { this._dangerSince=null; return 'clear'; }
+    if (!this._dangerSince) this._dangerSince=now;
+    return now-this._dangerSince<3000?'warning':'gameover';
   }
 
-  // Wird vom Merge-System aufgerufen um Countdown zu resetten
-  resetDanger() {
-    this._dangerSince = null;
-    this._lastMergeTime = Date.now();
-  }
-
-  // Wie viele Sekunden noch bis Game Over (0-4)
-  dangerSecondsLeft() {
-    if (!this._dangerSince) return 4;
-    return Math.max(0, 4 - (Date.now() - this._dangerSince) / 1000);
-  }
+  resetDanger() { this._dangerSince=null; this._lastMergeTime=Date.now(); }
+  dangerSecsLeft() { return this._dangerSince?Math.max(0,4-(Date.now()-this._dangerSince)/1000):4; }
 }
 
 class EffectsManager {
-  constructor(scene) {
-    this.scene = scene;
+  constructor(scene) { this.scene=scene; }
+
+  spawnMerge(x,y,level) {
+    const a=ANIMALS[Math.min(level,ANIMALS.length-1)];
+    const em=this.scene.add.particles(x,y,'__DEFAULT',{
+      speed:{min:(70+level*15)*SCALE_FACTOR,max:(180+level*25)*SCALE_FACTOR},
+      angle:{min:0,max:360},scale:{start:(.7+level*.07)*SCALE_FACTOR,end:0},
+      alpha:{start:1,end:0},lifespan:380+level*25,quantity:14+level*2,
+      tint:[a.color,0xffffff,0xffffcc],emitting:false,depth:5,
+    });
+    em.explode(14+level*2);
+    this.scene.time.delayedCall(700,()=>{if(em.active)em.destroy();});
+    const ring=this.scene.add.graphics().setDepth(5);
+    ring.lineStyle(3*SCALE_FACTOR,a.color,.95).strokeCircle(0,0,12*SCALE_FACTOR).setPosition(x,y);
+    this.scene.tweens.add({targets:ring,scaleX:4.5+level*.55,scaleY:4.5+level*.55,alpha:0,duration:340+level*18,ease:'Quad.easeOut',onComplete:()=>ring.destroy()});
+    this.scene.cameras.main.shake(100+level*12,.004+level*.0008);
+    playMergeSound(level); vibrate(15+level*5);
   }
 
-  spawnMerge(x, y, level) {
-    const a = ANIMALS[Math.min(level, ANIMALS.length - 1)];
-    const emitter = this.scene.add.particles(x, y, '__DEFAULT', {
-      speed:    { min: (70 + level * 15) * SCALE_FACTOR, max: (180 + level * 25) * SCALE_FACTOR },
-      angle:    { min: 0, max: 360 },
-      scale:    { start: (0.7 + level * 0.07) * SCALE_FACTOR, end: 0 },
-      alpha:    { start: 1, end: 0 },
-      lifespan: 380 + level * 25,
-      quantity: 14 + level * 2,
-      tint:     [a.color, 0xffffff, 0xffffcc],
-      emitting: false,
-      depth:    5,
+  spawnGameOverFX() {
+    const em=this.scene.add.particles(W/2,H/2,'__DEFAULT',{
+      speed:{min:100*SCALE_FACTOR,max:220*SCALE_FACTOR},angle:{min:0,max:360},
+      scale:{start:1.2*SCALE_FACTOR,end:0},alpha:{start:1,end:0},lifespan:900,quantity:50,
+      tint:[0xff4444,0xff8800,0xffff00,0xffffff],emitting:false,depth:20,
     });
-    emitter.explode(14 + level * 2);
-    this.scene.time.delayedCall(700, () => { if (emitter.active) emitter.destroy(); });
-
-    const ring = this.scene.add.graphics().setDepth(5);
-    ring.lineStyle(3 * SCALE_FACTOR, a.color, 0.95);
-    ring.strokeCircle(0, 0, 12 * SCALE_FACTOR);
-    ring.setPosition(x, y);
-    this.scene.tweens.add({
-      targets:  ring,
-      scaleX:   4.5 + level * 0.55,
-      scaleY:   4.5 + level * 0.55,
-      alpha:    0,
-      duration: 340 + level * 18,
-      ease:     'Quad.easeOut',
-      onComplete: () => ring.destroy(),
-    });
-
-    this.scene.cameras.main.shake(100 + level * 12, 0.004 + level * 0.0008);
-    playMergeSound(level);
-    vibrate(15 + level * 5);
+    em.explode(50); this.scene.time.delayedCall(1100,()=>{if(em.active)em.destroy();});
+    vibrate([100,50,100]);
   }
 
-  spawnGameOverEffect(cx, cy) {
-    const emitter = this.scene.add.particles(cx, cy, '__DEFAULT', {
-      speed:    { min: 100 * SCALE_FACTOR, max: 220 * SCALE_FACTOR },
-      angle:    { min: 0, max: 360 },
-      scale:    { start: 1.2 * SCALE_FACTOR, end: 0 },
-      alpha:    { start: 1, end: 0 },
-      lifespan: 900,
-      quantity: 50,
-      tint:     [0xff4444, 0xff8800, 0xffff00, 0xffffff],
-      emitting: false,
-      depth:    20,
+  spawnWinFX() {
+    const conf=this.scene.add.particles(W/2,0,'__DEFAULT',{
+      speedX:{min:-120*SCALE_FACTOR,max:120*SCALE_FACTOR},speedY:{min:80*SCALE_FACTOR,max:260*SCALE_FACTOR},
+      scale:{start:.9*SCALE_FACTOR,end:.2*SCALE_FACTOR},alpha:{start:1,end:0},lifespan:1800,quantity:4,
+      tint:[0xffd700,0xff69b4,0x00cfff,0x7fff00,0xff8c00,0xda70d6],depth:20,gravityY:60*SCALE_FACTOR,
     });
-    emitter.explode(50);
-    this.scene.time.delayedCall(1100, () => { if (emitter.active) emitter.destroy(); });
-    vibrate([100, 50, 100]);
-  }
-
-  spawnWinEffect(cx, cy) {
-    const confetti = this.scene.add.particles(cx, 0, '__DEFAULT', {
-      speedX:   { min: -120 * SCALE_FACTOR, max: 120 * SCALE_FACTOR },
-      speedY:   { min: 80 * SCALE_FACTOR,   max: 260 * SCALE_FACTOR },
-      scale:    { start: 0.9 * SCALE_FACTOR, end: 0.2 * SCALE_FACTOR },
-      alpha:    { start: 1, end: 0 },
-      lifespan: 1800,
-      quantity: 4,
-      tint:     [0xffd700, 0xff69b4, 0x00cfff, 0x7fff00, 0xff8c00, 0xda70d6],
-      depth:    20,
-      gravityY: 60 * SCALE_FACTOR,
+    this.scene.time.delayedCall(2500,()=>{conf.stop();this.scene.time.delayedCall(2000,()=>{if(conf.active)conf.destroy();});});
+    const burst=this.scene.add.particles(W/2,H/2,'__DEFAULT',{
+      speed:{min:120*SCALE_FACTOR,max:300*SCALE_FACTOR},angle:{min:0,max:360},
+      scale:{start:1.4*SCALE_FACTOR,end:0},alpha:{start:1,end:0},lifespan:1000,quantity:60,
+      tint:[0xffd700,0xffffff,0xff69b4,0x00cfff],emitting:false,depth:20,
     });
-    this.scene.time.delayedCall(2500, () => {
-      confetti.stop();
-      this.scene.time.delayedCall(2000, () => { if (confetti.active) confetti.destroy(); });
-    });
-
-    const burst = this.scene.add.particles(cx, cy, '__DEFAULT', {
-      speed:    { min: 120 * SCALE_FACTOR, max: 300 * SCALE_FACTOR },
-      angle:    { min: 0, max: 360 },
-      scale:    { start: 1.4 * SCALE_FACTOR, end: 0 },
-      alpha:    { start: 1, end: 0 },
-      lifespan: 1000,
-      quantity: 60,
-      tint:     [0xffd700, 0xffffff, 0xff69b4, 0x00cfff],
-      emitting: false,
-      depth:    20,
-    });
-    burst.explode(60);
-    this.scene.time.delayedCall(1200, () => { if (burst.active) burst.destroy(); });
-    this.scene.cameras.main.shake(600, 0.012);
-    vibrate([200, 100, 200, 100, 200]);
+    burst.explode(60); this.scene.time.delayedCall(1200,()=>{if(burst.active)burst.destroy();});
+    this.scene.cameras.main.shake(600,.012); vibrate([200,100,200,100,200]);
   }
 }
 
 class GameScene extends Phaser.Scene {
-  constructor() { super({ key: 'GameScene' }); }
+  constructor(){super({key:'GameScene'});}
 
   create() {
-    activeScene = this;
-    this._initState();
-    this._initPhysics();
-    this._initGraphics();
+    activeScene=this;
+    this.score=0; this.gameOver=false; this.canDrop=true;
+    this.mouseX=W/2; this.currentType=randNext(); this.nextType=randNext();
+    this.gameOverShown=false; this.overlayContainer=null;
+    this._bgTime=0; this._bgSky0=_gbcSky0; this._bgSky1=_gbcSky1;
+    this._warningActive=false; this._lastWarnShake=0;
+    drawPreview(this.nextType); updateScore(0);
+
+    this.matter.world.setGravity(0,1.8);
+    const wOpts={isStatic:true,friction:0,frictionStatic:0,restitution:.05};
+    this.matter.add.rectangle(W/2,H+30*SCALE_FACTOR,W+200*SCALE_FACTOR,60*SCALE_FACTOR,{...wOpts,friction:.4,frictionStatic:.6});
+    this.matter.add.rectangle(-28*SCALE_FACTOR,H/2,56*SCALE_FACTOR,H*3,wOpts);
+    this.matter.add.rectangle(W+28*SCALE_FACTOR,H/2,56*SCALE_FACTOR,H*3,wOpts);
+
+    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+    this.ballMgr=new BallManager(this);
+    this.effects=new EffectsManager(this);
+    this.guideGfx=this.add.graphics().setDepth(2);
+    this.lineGfx=this.add.graphics().setDepth(2);
+    this.previewGfx=this.add.graphics().setDepth(3);
+    this.previewLabel=this.add.text(W/2,GAME_OVER_LINE,'',{fontFamily:'serif',fontSize:Math.floor(28*SCALE_FACTOR)+'px'}).setOrigin(.5,.5).setDepth(4);
+    this._countdownText=this.add.text(W/2,GAME_OVER_LINE+14*SCALE_FACTOR,'',{fontFamily:'system-ui',fontSize:Math.floor(15*SCALE_FACTOR)+'px',fontStyle:'bold',color:'#ff6666'}).setOrigin(.5,0).setDepth(13).setAlpha(0);
+
     this._initInput();
     this._initCollisions();
     startBgMusic();
-    setTimeout(() => {
-      // Erst game-wrapper einblenden, dann loading-screen ausblenden
-      document.getElementById('game-wrapper').style.display = 'flex';
-      document.getElementById('loading-screen').classList.add('hidden');
+    setTimeout(()=>{
+      document.getElementById('game-wrapper').style.display='flex';
+      const ls=document.getElementById('loading-screen');
+      ls.style.display='flex';
+      // kurz warten damit display:flex greift, dann fade-out
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          ls.classList.add('hidden');
+          setTimeout(()=>{ ls.style.display='none'; ls.classList.remove('hidden'); },550);
+        });
+      });
       if (window._stopStartBg) window._stopStartBg();
-      // Canvas ausblenden nach Fade
-      setTimeout(() => {
-        const c = document.getElementById('start-bg-canvas');
-        if (c) c.style.display = 'none';
-      }, 600);
-    }, 500);
-  }
-
-  _initState() {
-    this.score         = 0;
-    this.gameOver      = false;
-    this.canDrop       = true;
-    this.mouseX        = W / 2;
-    this.currentType   = randNext();
-    this.nextType      = randNext();
-    this.gameOverShown = false;
-    this.overlayContainer = null;
-    drawPreview(this.nextType);
-    updateScore(0);
-  }
-
-  _initPhysics() {
-    this.matter.world.setGravity(0, 1.8);
-    // Wände und Boden
-    const wallOpts = { isStatic: true, friction: 0.0, frictionStatic: 0.0, restitution: 0.05 };
-    this.matter.add.rectangle(W / 2, H + 30 * SCALE_FACTOR, W + 200 * SCALE_FACTOR, 60 * SCALE_FACTOR,
-      { ...wallOpts, friction: 0.4, frictionStatic: 0.6, restitution: 0.05 });  // Boden: mehr Grip, kaum Bounce
-    this.matter.add.rectangle(-28 * SCALE_FACTOR, H / 2, 56 * SCALE_FACTOR, H * 3, wallOpts);
-    this.matter.add.rectangle(W + 28 * SCALE_FACTOR, H / 2, 56 * SCALE_FACTOR, H * 3, wallOpts);
-  }
-
-  _initGraphics() {
-    this.bg           = new Background(this);
-    this.ballMgr      = new BallManager(this);
-    this.effects      = new EffectsManager(this);
-    this.guideGfx     = this.add.graphics().setDepth(2);
-    this.lineGfx      = this.add.graphics().setDepth(2);
-    this.previewGfx   = this.add.graphics().setDepth(3);
-    this.previewLabel = this.add.text(W / 2, GAME_OVER_LINE, '', {
-      fontFamily: 'serif',
-      fontSize:   Math.floor(28 * SCALE_FACTOR) + 'px',
-    }).setOrigin(0.5, 0.5).setDepth(4);
-
-    // Countdown-Anzeige (erscheint bei Gefahr)
-    this._countdownGfx  = this.add.graphics().setDepth(12);
-    this._countdownText = this.add.text(W / 2, GAME_OVER_LINE + 14 * SCALE_FACTOR, '', {
-      fontFamily: 'system-ui',
-      fontSize:   Math.floor(15 * SCALE_FACTOR) + 'px',
-      fontStyle:  'bold',
-      color:      '#ff6666',
-    }).setOrigin(0.5, 0).setDepth(13).setAlpha(0);
-    this._warningActive = false;
+    },500);
   }
 
   _initInput() {
-    const canvas = this.sys.game.canvas;
-    let touchActive = false;
-
-    canvas.addEventListener('mousemove', e => {
-      if (touchActive) return;
-      const r = canvas.getBoundingClientRect();
-      this.mouseX = Phaser.Math.Clamp((e.clientX - r.left) * (W / r.width), 0, W);
+    const canvas=this.sys.game.canvas;
+    let touchActive=false;
+    canvas.addEventListener('mousemove',e=>{
+      if(touchActive)return;
+      const r=canvas.getBoundingClientRect();
+      this.mouseX=Phaser.Math.Clamp((e.clientX-r.left)*(W/r.width),0,W);
     });
-
-    canvas.addEventListener('touchmove', e => {
-      e.preventDefault();
-      touchActive = true;
-      if (e.touches.length > 0) {
-        const r = canvas.getBoundingClientRect();
-        this.mouseX = Phaser.Math.Clamp((e.touches[0].clientX - r.left) * (W / r.width), 0, W);
-      }
-    }, { passive: false });
-
-    canvas.addEventListener('touchstart', e => {
-      e.preventDefault();
-      touchActive = true;
-      if (e.touches.length > 0) {
-        const r = canvas.getBoundingClientRect();
-        this.mouseX = Phaser.Math.Clamp((e.touches[0].clientX - r.left) * (W / r.width), 0, W);
-      }
-    }, { passive: false });
-
-    canvas.addEventListener('click', () => {
-      if (touchActive) return;
-      this._handleDrop();
-    });
-
-    canvas.addEventListener('touchend', e => {
-      e.preventDefault();
-      this._handleDrop();
-      setTimeout(() => touchActive = false, 100);
-    }, { passive: false });
-
-    document.getElementById('menu-restart').onclick = () => {
-      menuOverlay.classList.remove('open');
-      this._reset();
-    };
+    canvas.addEventListener('touchmove',e=>{
+      e.preventDefault(); touchActive=true;
+      const r=canvas.getBoundingClientRect();
+      this.mouseX=Phaser.Math.Clamp((e.touches[0].clientX-r.left)*(W/r.width),0,W);
+    },{passive:false});
+    canvas.addEventListener('touchstart',e=>{
+      e.preventDefault(); touchActive=true;
+      const r=canvas.getBoundingClientRect();
+      this.mouseX=Phaser.Math.Clamp((e.touches[0].clientX-r.left)*(W/r.width),0,W);
+    },{passive:false});
+    canvas.addEventListener('click',()=>{if(!touchActive)this._drop();});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();this._drop();setTimeout(()=>touchActive=false,100);},{passive:false});
+    document.getElementById('menu-restart').onclick=()=>{menuOverlay.classList.remove('open');this._reset();};
   }
 
-  _handleDrop() {
-    if (!this.canDrop || this.gameOver) return;
-    this.ballMgr.drop(this.mouseX, this.currentType);
-    this.currentType = this.nextType;
-    this.nextType    = randNext();
-    drawPreview(this.nextType);
-    this.canDrop = false;
-    this.time.delayedCall(380, () => { this.canDrop = true; });
+  _drop() {
+    if (!this.canDrop||this.gameOver) return;
+    this.ballMgr.drop(this.mouseX,this.currentType);
+    this.currentType=this.nextType; this.nextType=randNext();
+    drawPreview(this.nextType); this.canDrop=false;
+    this.time.delayedCall(380,()=>{this.canDrop=true;});
   }
 
   _initCollisions() {
-    this.matter.world.on('collisionstart', event => {
-      event.pairs.forEach(({ bodyA, bodyB }) => {
-        if (bodyA._type == null || bodyB._type == null) return;
-        if (bodyA._type !== bodyB._type || bodyA._merged || bodyB._merged) return;
-        if (bodyA._type >= ANIMALS.length - 1) return;
-        bodyA._merged = bodyB._merged = true;
-
-        const nt = bodyA._type + 1;
-        const mx = (bodyA.position.x + bodyB.position.x) / 2;
-        const my = (bodyA.position.y + bodyB.position.y) / 2;
-        const vx = (bodyA.velocity.x + bodyB.velocity.x) * 0.25;
-        const vy = (bodyA.velocity.y + bodyB.velocity.y) * 0.25;
-
-        this.time.delayedCall(16, () => {
-          this._lastMergeTime = Date.now();
+    this.matter.world.on('collisionstart',event=>{
+      event.pairs.forEach(({bodyA,bodyB})=>{
+        if (bodyA._type==null||bodyB._type==null) return;
+        if (bodyA._type!==bodyB._type||bodyA._merged||bodyB._merged) return;
+        if (bodyA._type>=ANIMALS.length-1) return;
+        bodyA._merged=bodyB._merged=true;
+        const nt=bodyA._type+1;
+        const mx=(bodyA.position.x+bodyB.position.x)/2, my=(bodyA.position.y+bodyB.position.y)/2;
+        const vx=(bodyA.velocity.x+bodyB.velocity.x)*.25, vy=(bodyA.velocity.y+bodyB.velocity.y)*.25;
+        this.time.delayedCall(16,()=>{
           this.ballMgr.resetDanger();
-          this.effects.spawnMerge(mx, my, nt);
-          this.ballMgr.remove(bodyA);
-          this.ballMgr.remove(bodyB);
-          const nb = this.ballMgr.spawn(mx, my, nt);
-          // Neuer Ball: kombinierte Velocity + leichter Downward-Impuls
-          this.matter.body.setVelocity(nb, { x: vx * 0.5, y: Math.max(vy, 2.5) });
-          this.score += (nt + 1) * 2;
-          updateScore(this.score);
+          this.effects.spawnMerge(mx,my,nt);
+          this.ballMgr.remove(bodyA); this.ballMgr.remove(bodyB);
+          const nb=this.ballMgr.spawn(mx,my,nt);
+          this.matter.body.setVelocity(nb,{x:vx*.5,y:Math.max(vy,2.5)});
+          this.score+=(nt+1)*2; updateScore(this.score);
           flashMergeCell(nt);
-          if (nt === ANIMALS.length - 1) {
-            this.time.delayedCall(400, () => this._showWin(mx, my));
-          }
+          if (nt===ANIMALS.length-1) this.time.delayedCall(400,()=>this._showWin());
         });
       });
     });
   }
 
   _reset() {
-    stopBgMusic();
-    resetBgMusicBiome();
-    this.ballMgr.clear();
-    if (this.overlayContainer) { this.overlayContainer.destroy(); this.overlayContainer = null; }
-    this.score         = 0;
-    this.gameOver      = false;
-    this.canDrop       = true;
-    this.gameOverShown = false;
-    this._lastMergeTime = 0;
-    this._warningActive = false;
-    this._lastWarnShake = 0;
-    this._hideCountdown();
-    this.currentType   = randNext();
-    this.nextType      = randNext();
-    drawPreview(this.nextType);
-    updateScore(0);
-    // Tagesablauf auf Mittag zuruecksetzen
-    _dayCycleStart = Date.now() - 0.50 * DAY_CYCLE_SECONDS * 1000;
-    updateDynamicBackground(0);
+    stopBgMusic(); resetBgMusic(); this.ballMgr.clear();
+    if (this.overlayContainer){this.overlayContainer.destroy();this.overlayContainer=null;}
+    this.score=0; this.gameOver=false; this.canDrop=true; this.gameOverShown=false;
+    this._lastMergeTime=0; this._warningActive=false; this._lastWarnShake=0;
+    this._countdownText.setAlpha(0).setText('');
+    this.currentType=randNext(); this.nextType=randNext();
+    drawPreview(this.nextType); updateScore(0);
+    _dayCycleStart=Date.now()-0.50*DAY_CYCLE_SECONDS*1000;
     startBgMusic();
   }
 
-  _dashedLine(gfx, x1, y1, x2, y2, dash, gap) {
-    const dx  = x2 - x1, dy = y2 - y1;
-    const len = Math.hypot(dx, dy);
-    const nx  = dx / len, ny = dy / len;
-    let pos = 0, on = true;
-    while (pos < len) {
-      const seg = Math.min(on ? dash : gap, len - pos);
-      if (on) {
-        gfx.beginPath();
-        gfx.moveTo(x1 + nx * pos, y1 + ny * pos);
-        gfx.lineTo(x1 + nx * (pos + seg), y1 + ny * (pos + seg));
-        gfx.strokePath();
-      }
-      pos += seg;
-      on = !on;
-    }
+  _dashedLine(gfx,x1,y1,x2,y2,dash,gap) {
+    const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),nx=dx/len,ny=dy/len;
+    let pos=0,on=true;
+    while(pos<len){const seg=Math.min(on?dash:gap,len-pos);if(on){gfx.beginPath();gfx.moveTo(x1+nx*pos,y1+ny*pos);gfx.lineTo(x1+nx*(pos+seg),y1+ny*(pos+seg));gfx.strokePath();}pos+=seg;on=!on;}
   }
 
-  _drawGuide() {
+  update(time,delta) {
+    // Kamera transparent halten
+    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+
+    // Guide-Linie
     this.guideGfx.clear();
-    if (this.gameOver) return;
-    const a = ANIMALS[this.currentType];
-    const x = Phaser.Math.Clamp(this.mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
-    this.guideGfx.lineStyle(1 * SCALE_FACTOR, 0xffffff, 0.18);
-    this._dashedLine(this.guideGfx, x, GAME_OVER_LINE, x, H, 6 * SCALE_FACTOR, 5 * SCALE_FACTOR);
-  }
-
-  _drawDangerLine() {
-    this.lineGfx.clear();
-    // Pulsieren wenn Warnung aktiv
-    let alpha = 0.7;
-    let color = 0xff4444;
-    if (this._warningActive) {
-      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 180);
-      alpha = 0.6 + pulse * 0.4;
-      color = 0xff2222;
-      // Glow hinter der Linie
-      this.lineGfx.lineStyle(6 * SCALE_FACTOR, 0xff0000, 0.18 + pulse * 0.18);
-      this._dashedLine(this.lineGfx, 0, GAME_OVER_LINE, W, GAME_OVER_LINE, 10 * SCALE_FACTOR, 6 * SCALE_FACTOR);
+    if (!this.gameOver) {
+      const a=ANIMALS[this.currentType], x=Phaser.Math.Clamp(this.mouseX,a.r+4*SCALE_FACTOR,W-a.r-4*SCALE_FACTOR);
+      this.guideGfx.lineStyle(1*SCALE_FACTOR,0xffffff,.18);
+      this._dashedLine(this.guideGfx,x,GAME_OVER_LINE,x,H,6*SCALE_FACTOR,5*SCALE_FACTOR);
     }
-    this.lineGfx.lineStyle(2 * SCALE_FACTOR, color, alpha);
-    this._dashedLine(this.lineGfx, 0, GAME_OVER_LINE, W, GAME_OVER_LINE, 10 * SCALE_FACTOR, 6 * SCALE_FACTOR);
-  }
 
-  _drawPreviewBall() {
+    // Gefahrenlinie
+    this.lineGfx.clear();
+    if (this._warningActive) {
+      const pulse=.5+.5*Math.sin(Date.now()/180);
+      this.lineGfx.lineStyle(6*SCALE_FACTOR,0xff0000,.18+pulse*.18);
+      this._dashedLine(this.lineGfx,0,GAME_OVER_LINE,W,GAME_OVER_LINE,10*SCALE_FACTOR,6*SCALE_FACTOR);
+      this.lineGfx.lineStyle(2*SCALE_FACTOR,0xff2222,.6+pulse*.4);
+    } else {
+      this.lineGfx.lineStyle(2*SCALE_FACTOR,0xff4444,.7);
+    }
+    this._dashedLine(this.lineGfx,0,GAME_OVER_LINE,W,GAME_OVER_LINE,10*SCALE_FACTOR,6*SCALE_FACTOR);
+
+    // Preview-Ball
     this.previewGfx.clear();
-    if (this.gameOver) { this.previewLabel.setVisible(false); return; }
-    const a = ANIMALS[this.currentType];
-    const x = Phaser.Math.Clamp(this.mouseX, a.r + 4 * SCALE_FACTOR, W - a.r - 4 * SCALE_FACTOR);
-    // Ball-Unterkante liegt genau auf der roten Gefahrenlinie
-    const y = GAME_OVER_LINE - a.r;
+    if (!this.gameOver) {
+      const a=ANIMALS[this.currentType], x=Phaser.Math.Clamp(this.mouseX,a.r+4*SCALE_FACTOR,W-a.r-4*SCALE_FACTOR), y=GAME_OVER_LINE-a.r;
+      this.previewGfx.fillStyle(0x000000,.12).fillEllipse(x,y+a.r+3*SCALE_FACTOR,a.r*1.8,a.r*.32);
+      this.previewGfx.fillStyle(a.color,.92).fillCircle(x,y,a.r);
+      const bw=Math.max(2,a.r*.09);
+      this.previewGfx.lineStyle(bw,_borderColor(a.color),.85).strokeCircle(x,y,a.r-bw*.5);
+      this.previewLabel.setVisible(true).setPosition(x,y+2).setText(a.emoji).setFontSize(Math.floor(a.r*1.4));
+    } else { this.previewLabel.setVisible(false); }
 
-    // Schatten unter dem Ball
-    this.previewGfx.fillStyle(0x000000, 0.12);
-    this.previewGfx.fillEllipse(x, y + a.r + 3 * SCALE_FACTOR, a.r * 1.8, a.r * 0.32);
-    // Pastellkreis
-    this.previewGfx.fillStyle(a.color, 0.92);
-    this.previewGfx.fillCircle(x, y, a.r);
-    // Farbige Umrandung
-    const borderHexP = _borderColorFor(a.color);
-    const bwP = Math.max(2, a.r * 0.09);
-    this.previewGfx.lineStyle(bwP, borderHexP, 0.85);
-    this.previewGfx.strokeCircle(x, y, a.r - bwP * 0.5);
+    this.ballMgr.draw(delta);
+    if (this.gameOver) return;
 
-    this.previewLabel.setVisible(true).setPosition(x, y + 2)
-      .setText(a.emoji).setFontSize(Math.floor(a.r * 1.4));
+    const danger=this.ballMgr.checkDangerState();
+    if (danger==='gameover') { this.gameOver=true; this.canDrop=false; this._countdownText.setAlpha(0).setText(''); this._showGameOver(); return; }
+    if (danger==='warning') {
+      const sec=this.ballMgr.dangerSecsLeft();
+      this._countdownText.setText(`⚠️  Noch ${Math.ceil(sec)} s – merge jetzt!`).setAlpha(.55+(1-sec/4)*.45);
+      this._warningActive=true;
+      if (!this._lastWarnShake||time-this._lastWarnShake>900){this.cameras.main.shake(180,.003);this._lastWarnShake=time;}
+    } else {
+      if(this._warningActive){this._countdownText.setAlpha(0).setText('');this._warningActive=false;}
+    }
   }
 
-  _showWin(ex, ey) {
+  _overlay(title,scoreText,btnLabel,btnColor,onBtn,extraFn) {
+    if (this.gameOverShown) return; this.gameOverShown=true;
+    const ov=this.add.graphics().setDepth(15); ov.fillStyle(0x000000,.55).fillRect(0,0,W,H);
+    const pw=300*SCALE_FACTOR,ph=220*SCALE_FACTOR,px=W/2-pw/2,py=H/2-ph/2;
+    const panel=this.add.graphics().setDepth(16);
+    panel.fillStyle(0x0d1117,.97).fillRoundedRect(px,py,pw,ph,18*SCALE_FACTOR);
+    panel.lineStyle(1*SCALE_FACTOR,0xffffff,.14).strokeRoundedRect(px,py,pw,ph,18*SCALE_FACTOR);
+    const items=[ov,panel];
+    if (extraFn) extraFn(items);
+    const t=this.add.text(W/2,H/2-36*SCALE_FACTOR,title,{fontSize:Math.floor(28*SCALE_FACTOR)+'px',fontFamily:'system-ui',color:'#ffffff',fontStyle:'bold'}).setOrigin(.5,.5).setDepth(17);
+    const sc=this.add.text(W/2,H/2+4*SCALE_FACTOR,scoreText,{fontSize:Math.floor(18*SCALE_FACTOR)+'px',fontFamily:'system-ui',color:'#ffd700'}).setOrigin(.5,.5).setDepth(17);
+    const bw=180*SCALE_FACTOR,bh=44*SCALE_FACTOR,bg=this.add.graphics().setDepth(17);
+    bg.fillStyle(btnColor,1).fillRoundedRect(W/2-bw/2,H/2+55*SCALE_FACTOR-bh/2,bw,bh,12*SCALE_FACTOR);
+    const btn=this.add.text(W/2,H/2+55*SCALE_FACTOR,btnLabel,{fontSize:Math.floor(17*SCALE_FACTOR)+'px',fontFamily:'system-ui',color:'#ffffff',fontStyle:'bold'}).setOrigin(.5,.5).setDepth(18).setInteractive({useHandCursor:true});
+    btn.on('pointerup',onBtn);
+    items.push(t,sc,bg,btn);
+    this.overlayContainer=this.add.container(0,0,items).setDepth(15).setAlpha(0);
+    this.tweens.add({targets:this.overlayContainer,alpha:1,duration:380,ease:'Quad.easeIn'});
+  }
+
+  _showGameOver() { this.effects.spawnGameOverFX(); this._overlay('Spiel vorbei',`Punkte: ${this.score}`,'🔄 Neu starten',0x27ae60,()=>this._reset()); }
+
+  _showWin() {
     if (this.gameOverShown) return;
-    this.gameOverShown = true;
-    this.gameOver      = true;
-    this.canDrop       = false;
-    stopBgMusic();
-    playFanfare();
-    this.effects.spawnWinEffect(W / 2, H / 2);
-
-    this.time.delayedCall(1200, () => {
+    this.gameOver=true; this.canDrop=false;
+    stopBgMusic(); playFanfare(); this.effects.spawnWinFX();
+    this.time.delayedCall(1200,()=>{
       playElephantSound();
-
-      const overlay = this.add.graphics().setDepth(15);
-      overlay.fillStyle(0x000000, 0.5);
-      overlay.fillRect(0, 0, W, H);
-
-      const panel = this.add.graphics().setDepth(16);
-      const pw = 300 * SCALE_FACTOR, ph = 230 * SCALE_FACTOR;
-      panel.fillStyle(0x1a1200, 0.97);
-      panel.fillRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 20 * SCALE_FACTOR);
-      panel.lineStyle(3 * SCALE_FACTOR, 0xffd700, 0.9);
-      panel.strokeRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 20 * SCALE_FACTOR);
-
-      const winEmoji = ANIMALS[ANIMALS.length - 1].emoji;
-      const elephant = this.add.text(W / 2, H / 2 - 72 * SCALE_FACTOR, winEmoji, {
-        fontSize: Math.floor(52 * SCALE_FACTOR) + 'px',
-      }).setOrigin(0.5, 0.5).setDepth(17);
-
-      const title = this.add.text(W / 2, H / 2 - 10 * SCALE_FACTOR, 'Du hast gewonnen!', {
-        fontSize:   Math.floor(26 * SCALE_FACTOR) + 'px',
-        fontFamily: 'system-ui',
-        color:      '#ffd700',
-        fontStyle:  'bold',
-      }).setOrigin(0.5, 0.5).setDepth(17);
-
-      const sc = this.add.text(W / 2, H / 2 + 28 * SCALE_FACTOR, `Punkte: ${this.score}`, {
-        fontSize:   Math.floor(18 * SCALE_FACTOR) + 'px',
-        fontFamily: 'system-ui',
-        color:      '#ffffff',
-      }).setOrigin(0.5, 0.5).setDepth(17);
-
-      const btnW = 180 * SCALE_FACTOR, btnH = 44 * SCALE_FACTOR;
-      const btnBg = this.add.graphics().setDepth(17);
-      btnBg.fillStyle(0xffd700, 1);
-      btnBg.fillRoundedRect(W / 2 - btnW / 2, H / 2 + 62 * SCALE_FACTOR - btnH / 2, btnW, btnH, 12 * SCALE_FACTOR);
-
-      const btnText = this.add.text(W / 2, H / 2 + 62 * SCALE_FACTOR, '🔄 Neu starten', {
-        fontSize:   Math.floor(17 * SCALE_FACTOR) + 'px',
-        fontFamily: 'system-ui',
-        color:      '#1a1200',
-        fontStyle:  'bold',
-      }).setOrigin(0.5, 0.5).setDepth(18).setInteractive({ useHandCursor: true });
-
-      btnText.on('pointerup', () => this._reset());
-
-      const container = this.add.container(0, 0, [overlay, panel, elephant, title, sc, btnBg, btnText]).setDepth(15);
-      container.setAlpha(0);
-      this.tweens.add({
-        targets:  container,
-        alpha:    1,
-        duration: 500,
-        ease:     'Quad.easeOut',
-        onComplete: () => {
-          this.tweens.add({
-            targets:  elephant,
-            y:        H / 2 - 82 * SCALE_FACTOR,
-            duration: 350,
-            yoyo:     true,
-            repeat:   -1,
-            ease:     'Sine.easeInOut',
-          });
-        },
+      const winEmoji=ANIMALS[ANIMALS.length-1].emoji;
+      this._overlay('Du hast gewonnen!',`Punkte: ${this.score}`,'🔄 Neu starten',0xffd700,()=>this._reset(),(items)=>{
+        // Panel goldenen Rahmen
+        const pw=300*SCALE_FACTOR,ph=220*SCALE_FACTOR,px=W/2-pw/2,py=H/2-ph/2;
+        items[1].lineStyle(3*SCALE_FACTOR,0xffd700,.9).strokeRoundedRect(px,py,pw,ph,18*SCALE_FACTOR);
+        const em=this.add.text(W/2,H/2-70*SCALE_FACTOR,winEmoji,{fontSize:Math.floor(50*SCALE_FACTOR)+'px'}).setOrigin(.5,.5).setDepth(17);
+        items.push(em);
+        this.time.delayedCall(900,()=>{
+          this.tweens.add({targets:em,y:H/2-80*SCALE_FACTOR,duration:350,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+        });
       });
-      this.overlayContainer = container;
     });
   }
-
-  _showGameOver() {
-    if (this.gameOverShown) return;
-    this.gameOverShown = true;
-    this.effects.spawnGameOverEffect(W / 2, H / 2);
-
-    const overlay = this.add.graphics().setDepth(15);
-    overlay.fillStyle(0x000000, 0.58);
-    overlay.fillRect(0, 0, W, H);
-
-    const panel = this.add.graphics().setDepth(16);
-    const pw = 270 * SCALE_FACTOR, ph = 190 * SCALE_FACTOR;
-    panel.fillStyle(0x0d1117, 0.97);
-    panel.fillRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 18 * SCALE_FACTOR);
-    panel.lineStyle(1 * SCALE_FACTOR, 0xffffff, 0.14);
-    panel.strokeRoundedRect(W / 2 - pw / 2, H / 2 - ph / 2, pw, ph, 18 * SCALE_FACTOR);
-
-    const title = this.add.text(W / 2, H / 2 - 44 * SCALE_FACTOR, 'Spiel vorbei', {
-      fontSize:   Math.floor(30 * SCALE_FACTOR) + 'px',
-      fontFamily: 'system-ui',
-      color:      '#ffffff',
-      fontStyle:  'bold',
-    }).setOrigin(0.5, 0.5).setDepth(17);
-
-    const sc = this.add.text(W / 2, H / 2 + 0 * SCALE_FACTOR, `Punkte: ${this.score}`, {
-      fontSize:   Math.floor(20 * SCALE_FACTOR) + 'px',
-      fontFamily: 'system-ui',
-      color:      '#ffd700',
-    }).setOrigin(0.5, 0.5).setDepth(17);
-
-    const btnW = 180 * SCALE_FACTOR, btnH = 44 * SCALE_FACTOR;
-    const btnBg = this.add.graphics().setDepth(17);
-    btnBg.fillStyle(0x27ae60, 1);
-    btnBg.fillRoundedRect(W / 2 - btnW / 2, H / 2 + 50 * SCALE_FACTOR - btnH / 2, btnW, btnH, 12 * SCALE_FACTOR);
-
-    const btnText = this.add.text(W / 2, H / 2 + 50 * SCALE_FACTOR, '🔄 Neu starten', {
-      fontSize:   Math.floor(17 * SCALE_FACTOR) + 'px',
-      fontFamily: 'system-ui',
-      color:      '#ffffff',
-      fontStyle:  'bold',
-    }).setOrigin(0.5, 0.5).setDepth(18).setInteractive({ useHandCursor: true });
-
-    btnText.on('pointerup', () => this._reset());
-
-    this.overlayContainer = this.add.container(0, 0, [overlay, panel, title, sc, btnBg, btnText]).setDepth(15);
-    this.overlayContainer.setAlpha(0);
-    this.tweens.add({ targets: this.overlayContainer, alpha: 1, duration: 380, ease: 'Quad.easeIn' });
-  }
-
-  update(time, delta) {
-    this.bg.draw(this.score, delta);
-    this._drawGuide();
-    this._drawDangerLine();
-    this._drawPreviewBall();
-    this.ballMgr.draw(delta);
-
-    if (this.gameOver) return;
-
-    const danger = this.ballMgr.checkDangerState();
-
-    if (danger === 'gameover') {
-      this.gameOver  = true;
-      this.canDrop   = false;
-      this._hideCountdown();
-      this._showGameOver();
-      return;
-    }
-
-    if (danger === 'warning') {
-      const secsLeft = this.ballMgr.dangerSecondsLeft();
-      this._showCountdown(secsLeft);
-      // Leichte Kamera-Warnung alle ~1 s
-      if (!this._lastWarnShake || time - this._lastWarnShake > 900) {
-        this.cameras.main.shake(180, 0.003);
-        this._lastWarnShake = time;
-      }
-    } else {
-      this._hideCountdown();
-    }
-  }
-
-  _showCountdown(secsLeft) {
-    const frac = secsLeft / 4; // 1 = viel Zeit, 0 = sofort Game Over
-    const alpha = 0.55 + (1 - frac) * 0.45; // wird krueftiger
-    this._countdownText
-      .setText(`⚠️  Noch ${Math.ceil(secsLeft)} s – merge jetzt!`)
-      .setAlpha(alpha);
-    this._warningActive = true;
-  }
-
-  _hideCountdown() {
-    if (!this._warningActive) return;
-    this._countdownText.setAlpha(0).setText('');
-    this._warningActive = false;
-  }
 }
 
-// ========================================
-// KATEGORIE-SYSTEM
-// ========================================
-let gameStarted = false;
-let activeScene = null;
-
-function buildCatGrid(containerId, onSelect) {
-  const grid = document.getElementById(containerId);
-  if (!grid) return;
-  grid.innerHTML = '';
-  Object.entries(EMOJI_CATEGORIES).forEach(([key, cat]) => {
-    const btn       = document.createElement('div');
-    btn.className   = 'cat-btn' + (key === activeCategory ? ' active' : '');
-    btn.dataset.cat = key;
-    btn.innerHTML   = `<span class="cat-icon">${cat.icon}</span><span class="cat-label">${cat.label}</span>`;
-    btn.addEventListener('click', () => { vibrate(8); onSelect(key); });
-    grid.appendChild(btn);
-  });
-}
-
-function refreshCatGrids() {
-  document.querySelectorAll('.cat-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.cat === activeCategory);
-  });
-}
-
-function applyCategory(key, scene) {
-  activeCategory = key;
-  ANIMALS.length = 0;
-  getAnimalsForCategory(key).forEach(a => ANIMALS.push(a));
-  refreshCatGrids();
-  if (document.getElementById('merge-bar').children.length > 0) initMergeBar();
-
-  if (scene && !scene.gameOver) {
-    // Bestehende Bälle: nur Grafik aktualisieren, Physik-Body bleibt unberührt
-    scene.ballMgr.refreshVisuals();
-
-    // Neuen Drop-Typ wählen
-    scene.currentType = randNext();
-    scene.nextType    = randNext();
-    scene.canDrop     = true;
-    drawPreview(scene.nextType);
-  }
-}
-
+// ── Start-Screen-Animation ───────────────────────────────────────────────────
 function startGameAfterUserTap() {
   if (gameStarted) return;
-  gameStarted = true;
-
-  // AudioContext entsperren
-  try {
-    const ctx   = getAudioCtx();
-    const empty = ctx.createBuffer(1, 1, 22050);
-    const src   = ctx.createBufferSource();
-    src.buffer  = empty;
-    src.connect(ctx.destination);
-    src.start(0);
-  } catch (e) { console.warn(e); }
-
-  document.getElementById('start-screen').style.display = 'none';
-  // Spiel-Hintergrund-Canvas starten
+  gameStarted=true;
+  try{const c=getAudioCtx(),e=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=e;s.connect(c.destination);s.start(0);}catch(_){}
+  document.getElementById('start-screen').style.display='none';
   startGameBgCanvas();
-  // game-wrapper erst nach dem Laden zeigen
-  const ls = document.getElementById('loading-screen');
-  // Aktives Kategorie-Emoji im Ladebildschirm zeigen
-  const loadEmoji = ls.querySelector('.loading-emoji');
-  if (loadEmoji) loadEmoji.textContent = EMOJI_CATEGORIES[activeCategory].emojis[EMOJI_CATEGORIES[activeCategory].emojis.length - 1];
-  // start-bg-canvas läuft weiter als Ladebildschirm-Hintergrund
-  ls.style.display = 'flex';
+  const ls=document.getElementById('loading-screen');
+  const le=ls.querySelector('.loading-emoji');
+  if(le)le.textContent=EMOJI_CATEGORIES[activeCategory].emojis[9];
+  ls.style.display='flex';
   initMergeBar();
 
   new Phaser.Game({
-    type:            Phaser.CANVAS,   // Canvas statt AUTO – stabiler auf iOS Safari
-    width:           W,
-    height:          H,
-    resolution:      Math.min(window.devicePixelRatio || 1, 2), // max 2x – spart GPU
-    pixelArt:        false,
-    roundPixels:     true,            // verhindert Sub-Pixel-Zittern
-    backgroundColor: 0x00000000,
-    transparent:     true,
-    parent:          'phaser-container',
-    fps: {
-      target: 60,
-      forceSetTimeOut: false,        // rAF bevorzugen
-      smoothStep: true,              // glättet unregelmäßige Frames
-    },
-    physics: {
-      default: 'matter',
-      matter: {
-        gravity:              { y: 1.8 },
-        debug:                false,
-        enableSleeping:       false,
-        positionIterations:   12,   // mehr Iterations → keine Überlappungen
-        velocityIterations:   10,   // präzisere Geschwindigkeitsauflösung
-        constraintIterations: 4,
-      },
-    },
-    scene: [GameScene],
+    type:Phaser.CANVAS,width:W,height:H,
+    resolution:Math.min(window.devicePixelRatio||1,2),
+    pixelArt:false,roundPixels:true,
+    backgroundColor:0x00000000,transparent:true,
+    parent:'phaser-container',
+    fps:{target:60,forceSetTimeOut:false,smoothStep:true},
+    physics:{default:'matter',matter:{gravity:{y:1.8},debug:false,enableSleeping:false,positionIterations:12,velocityIterations:10,constraintIterations:4}},
+    scene:[GameScene],
   });
-
-  // Phaser-Canvas nach Init explizit transparent machen
-  setTimeout(() => {
-    const phaserCanvas = document.querySelector('#phaser-container canvas');
-    if (phaserCanvas) {
-      phaserCanvas.style.background = 'transparent';
-      // Kontext mit alpha:true neu holen falls nötig
-      const ctx2d = phaserCanvas.getContext('2d', { alpha: true });
-      if (ctx2d) ctx2d.clearRect(0, 0, phaserCanvas.width, phaserCanvas.height);
-    }
-  }, 100);
 }
 
-// ========================================
-// INIT
-// ========================================
-window.addEventListener('DOMContentLoaded', () => {
-  const versionDisplay = document.getElementById('version-display');
-  if (versionDisplay) versionDisplay.textContent = `Version ${VERSION}`;
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('version-display').textContent=`Version ${VERSION}`;
 
-  // ── Animierter Startmenü-Hintergrund ──────────────────────────────────────
-  const startBgCanvas = document.getElementById('start-bg-canvas');
-  const sbCtx = startBgCanvas.getContext('2d');
-  let sbTime = 0;
-  let sbSky0 = '#48a8e0', sbSky1 = '#90cef0';
-  let sbHills = '#4a8830', sbPlants = '#50c040';
-  let sbAnimFrame = null;
+  // Einziger Hintergrund-Canvas – läuft durchgehend für Startmenü und Spiel
+  _resizeGbc();
+  window.addEventListener('resize',_resizeGbc);
+  _gbcRunning=true;
+  _gbcFrame=requestAnimationFrame(_drawGbc);
+  window._stopStartBg=()=>{}; // kein separates System mehr nötig
 
-  function resizeStartBg() {
-    startBgCanvas.width  = window.innerWidth;
-    startBgCanvas.height = window.innerHeight;
-  }
-  resizeStartBg();
-  window.addEventListener('resize', resizeStartBg);
-
-  function drawStartBg() {
-    if (!document.getElementById('start-screen') ||
-        document.getElementById('start-screen').style.display === 'none') return;
-
-    sbTime += 0.004;
-    const phase = getDayPhase(0);
-    const spd = 0.008;
-    const skyTarget = _sampleKeys(SKY_KEYS, phase);
-    sbSky0   = lerpHex(sbSky0,   skyTarget[0], spd);
-    sbSky1   = lerpHex(sbSky1,   skyTarget[1], spd);
-    sbHills  = lerpHex(sbHills,  _sampleKeys(HILL_KEYS,  phase), spd);
-    sbPlants = lerpHex(sbPlants, _sampleKeys(PLANT_KEYS, phase), spd);
-
-    // Body-Hintergrund synchron halten (nur wenn Spiel noch nicht gestartet)
-    if (!gameStarted) {
-      document.body.style.background =
-        `linear-gradient(180deg, ${sbSky0} 0%, ${sbSky1} 100%)`;
-    }
-
-    const W = startBgCanvas.width, H = startBgCanvas.height;
-    sbCtx.clearRect(0, 0, W, H);
-
-    // Himmel-Gradient
-    const grad = sbCtx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0,    sbSky0);
-    grad.addColorStop(0.75, sbSky1);
-    grad.addColorStop(1,    sbSky1);
-    sbCtx.fillStyle = grad;
-    sbCtx.fillRect(0, 0, W, H);
-
-    // Wolken (nur tagsüber) – kleine, abwechslungsreiche Wolken
-    if (phase > 0.35 && phase < 0.65) {
-      const ca = Math.min(1, Math.min(phase - 0.35, 0.65 - phase) * 12) * 0.5;
-      if (ca > 0.01) {
-        // Wolken-Definitionen: [xOff, yFrac, r in px, speed]
-        const sbClouds = [
-          { xOff: 0,   yFrac: 0.05, r: 18, spd: 1.0, puffs: [[0,0,1],[14,-5,0.72],[28,0,0.55]] },
-          { xOff: 180, yFrac: 0.10, r: 12, spd: 1.5, puffs: [[0,0,1],[10,-4,0.68],[20,1,0.50]] },
-          { xOff: 340, yFrac: 0.06, r: 22, spd: 0.7, puffs: [[0,0,1],[18,-6,0.80],[36,0,0.60],[28,-2,0.45]] },
-          { xOff: 80,  yFrac: 0.14, r: 10, spd: 1.8, puffs: [[0,0,1],[8,-3,0.65],[16,0,0.48]] },
-          { xOff: 260, yFrac: 0.08, r: 15, spd: 1.1, puffs: [[0,0,1],[12,-5,0.75],[25,1,0.55],[-8,2,0.40]] },
-          { xOff: 430, yFrac: 0.12, r: 9,  spd: 2.0, puffs: [[0,0,1],[7,-3,0.62],[14,0,0.45]] },
-        ];
-        sbCtx.fillStyle = `rgba(255,255,255,${ca})`;
-        for (const c of sbClouds) {
-          const totalW = W + 200;
-          const cx = ((c.xOff + sbTime * c.spd * 14) % totalW) - 60;
-          const cy = c.yFrac * H;
-          sbCtx.beginPath();
-          for (const [dx, dy, rs] of c.puffs) {
-            sbCtx.moveTo(cx + dx + rs * c.r, cy + dy);
-            sbCtx.arc(cx + dx, cy + dy, Math.max(0.1, rs * c.r), 0, Math.PI * 2);
-          }
-          sbCtx.fill();
-        }
-      }
-    }
-
-    // Sterne (nachts)
-    if (phase < 0.30 || phase > 0.75) {
-      const starA = phase < 0.30
-        ? Math.min(1, (0.30 - phase) * 8)
-        : Math.min(1, (phase - 0.75) * 8);
-      sbCtx.fillStyle = `rgba(255,255,255,${starA * 0.8})`;
-      for (let i = 0; i < 40; i++) {
-        const sx = ((i * 137.5) % 1) * W;
-        const sy = ((i * 97.3)  % 1) * H * 0.55;
-        const sr = 0.5 + (i % 3) * 0.5;
-        sbCtx.beginPath();
-        sbCtx.arc(sx, sy, sr, 0, Math.PI * 2);
-        sbCtx.fill();
-      }
-    }
-
-    // Hügel hinten
-    sbCtx.save();
-    sbCtx.globalAlpha = 0.92;
-    sbCtx.fillStyle = sbHills;
-    sbCtx.beginPath();
-    sbCtx.moveTo(0, H);
-    const hh = H * 0.22;
-    for (let x = 0; x <= W; x += 4) {
-      const y = H - hh
-        + Math.sin(x * 0.017 + sbTime * 0.65) * H * 0.022
-        + Math.sin(x * 0.007 + sbTime * 0.26) * H * 0.012;
-      sbCtx.lineTo(x, y);
-    }
-    sbCtx.lineTo(W, H);
-    sbCtx.closePath();
-    sbCtx.fill();
-    sbCtx.restore();
-
-    // Hügel vorne
-    sbCtx.save();
-    sbCtx.fillStyle = sbPlants;
-    sbCtx.beginPath();
-    sbCtx.moveTo(0, H);
-    const ph2 = H * 0.14;
-    for (let x = 0; x <= W; x += 4) {
-      const y = H - ph2
-        + Math.sin(x * 0.015 + sbTime * 1.15) * H * 0.018
-        + Math.sin(x * 0.009 + sbTime * 0.40) * H * 0.010;
-      sbCtx.lineTo(x, y);
-    }
-    sbCtx.lineTo(W, H);
-    sbCtx.closePath();
-    sbCtx.fill();
-    sbCtx.restore();
-
-    // Dunkler Vignette-Overlay für bessere Text-Lesbarkeit
-    const vig = sbCtx.createRadialGradient(W/2, H/2, H*0.15, W/2, H/2, H*0.85);
-    vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, 'rgba(0,0,0,0.45)');
-    sbCtx.fillStyle = vig;
-    sbCtx.fillRect(0, 0, W, H);
-
-    sbAnimFrame = requestAnimationFrame(drawStartBg);
-  }
-  sbAnimFrame = requestAnimationFrame(drawStartBg);
-
-  // Stoppe Animation wenn Spiel startet
-  const _origStart = startGameAfterUserTap;
-  window._stopStartBg = () => {
-    if (sbAnimFrame) { cancelAnimationFrame(sbAnimFrame); sbAnimFrame = null; }
-  };
-  buildCatGrid('start-cat-grid', key => {
-    activeCategory = key;
-    ANIMALS.length = 0;
-    getAnimalsForCategory(key).forEach(a => ANIMALS.push(a));
+  buildCatGrid('start-cat-grid',key=>{
+    activeCategory=key; ANIMALS.length=0; getAnimals(key).forEach(a=>ANIMALS.push(a));
     refreshCatGrids();
-    const icon = document.getElementById('start-icon');
-    if (icon) icon.textContent = EMOJI_CATEGORIES[key].emojis[EMOJI_CATEGORIES[key].emojis.length - 1];
+    const icon=document.getElementById('start-icon');
+    if(icon)icon.textContent=EMOJI_CATEGORIES[key].emojis[9];
   });
+  buildCatGrid('menu-cat-grid',key=>{applyCategory(key,activeScene);menuOverlay.classList.remove('open');});
 
-  buildCatGrid('menu-cat-grid', key => {
-    applyCategory(key, activeScene);
-    menuOverlay.classList.remove('open');
-  });
-
-  const startBtn = document.getElementById('start-btn');
-  if (startBtn) {
-    startBtn.addEventListener('click', startGameAfterUserTap);
-    startBtn.addEventListener('touchend', e => { e.preventDefault(); startGameAfterUserTap(); });
-  }
+  const sb=document.getElementById('start-btn');
+  sb.addEventListener('click',startGameAfterUserTap);
+  sb.addEventListener('touchend',e=>{e.preventDefault();startGameAfterUserTap();});
 });
 </script>
 </body>
