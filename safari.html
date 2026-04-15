@@ -9,12 +9,12 @@
 <title>Tier-Merge Safari</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{width:100%;height:100%;position:fixed;overflow:hidden;touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-  body{background:#0b1035;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  html,body{width:100%;height:100%;height:100dvh;position:fixed;overflow:hidden;touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  body{background:#0b1035;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh}
 
-  #game-bg-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:999;pointer-events:none}
+  #game-bg-canvas{position:fixed;inset:0;width:100%;height:100%;height:100dvh;z-index:999;pointer-events:none}
 
-  #game-wrapper{width:100vw;height:100vh;max-width:480px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:min(2vw,10px);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);position:relative;z-index:1}
+  #game-wrapper{width:100vw;height:100vh;height:100dvh;max-width:480px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:min(2vw,10px);padding:max(env(safe-area-inset-top),8px) env(safe-area-inset-right) max(env(safe-area-inset-bottom),8px) env(safe-area-inset-left);position:relative;z-index:1}
 
   #hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:min(calc(100vw - 20px),420px);padding:min(2vw,8px) min(3.3vw,14px);background:rgba(255,255,255,.07);border-radius:min(3.3vw,14px);border:1px solid rgba(255,255,255,.1);color:#fff;backdrop-filter:blur(10px)}
   #next-box{display:flex;flex-direction:row;align-items:center;gap:min(2vw,8px)}
@@ -54,7 +54,7 @@
   .merge-arrow{position:absolute;right:-3px;top:50%;transform:translateY(-50%);font-size:min(1.9vw,8px);color:rgba(255,255,255,.25);z-index:1;pointer-events:none}
   .merge-cell:last-child .merge-arrow{display:none}
 
-  #start-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:2000;color:white;font-family:system-ui;text-align:center;gap:18px;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow-y:auto}
+  #start-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:2000;color:white;font-family:system-ui;text-align:center;gap:18px;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(34px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow-y:auto}
   #loading-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:opacity .5s ease,visibility .5s ease}
   #loading-screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
   .loading-emoji{font-size:min(15vw,64px);animation:bounce 1s infinite}
@@ -418,7 +418,7 @@ function _sanitizeColor(hex) {
   return hex;
 }
 
-const RADII = [18,26,34,42,50,58,67,76,86,98];
+const RADII = [16,26,36,46,56,66,76,88,100,114];
 function getAnimals(catKey) {
   const cat = EMOJI_CATEGORIES[catKey];
   return cat.emojis.map((emoji,i) => ({emoji, r:Math.floor(RADII[i]*SCALE_FACTOR), color:_sanitizeColor(cat.colors[i])}));
@@ -602,17 +602,19 @@ function _drawGbc() {
     const ca=Math.min(1,Math.min(phase-0.35,0.65-phase)*12)*.45;
     if (ca>0.01) {
       const clouds=[
-        {xOff:0,yFrac:.04,r:22,spd:1.0,puffs:[[0,0,1],[14,-5,.72],[28,0,.55]]},
-        {xOff:220,yFrac:.09,r:16,spd:.7,puffs:[[0,0,1],[12,-4,.8],[24,0,.6],[-6,3,.45]]},
-        {xOff:420,yFrac:.05,r:12,spd:1.4,puffs:[[0,0,1],[9,-3,.7],[18,0,.5]]},
-        {xOff:620,yFrac:.12,r:19,spd:.9,puffs:[[0,0,1],[15,-5,.75],[30,2,.6],[22,-2,.42]]},
+        {xOff:0,   yFrac:.04,r:18,spd:1.0,puffs:[[0,0,1],[12,-4,.72],[22,0,.55]]},
+        {xOff:.22, yFrac:.09,r:14,spd:.7, puffs:[[0,0,1],[10,-3,.8],[20,0,.6],[-5,3,.45]]},
+        {xOff:.45, yFrac:.05,r:11,spd:1.4,puffs:[[0,0,1],[8,-3,.7],[16,0,.5]]},
+        {xOff:.68, yFrac:.12,r:16,spd:.9, puffs:[[0,0,1],[13,-4,.75],[26,2,.6],[19,-2,.42]]},
+        {xOff:.85, yFrac:.07,r:13,spd:1.1,puffs:[[0,0,1],[10,-3,.7],[20,0,.55]]},
       ];
       _gbcCtx.fillStyle=`rgba(255,255,255,${ca})`;
       for (const cl of clouds) {
-        const cx2=((cl.xOff+_gbcTime*cl.spd*20)%(W2+300))-80, cy2=cl.yFrac*H2;
+        const startX = typeof cl.xOff === 'number' && cl.xOff < 1 ? cl.xOff * W2 : cl.xOff;
+        const cx2=((startX+_gbcTime*cl.spd*20)%(W2+200))-60, cy2=cl.yFrac*H2;
         _gbcCtx.beginPath();
         for (const [dx,dy,rs] of cl.puffs) {
-          _gbcCtx.arc(cx2+dx*(W2/420),cy2+dy*(H2/580),Math.max(.1,rs*cl.r*(W2/420)),0,Math.PI*2);
+          _gbcCtx.arc(cx2+dx,cy2+dy,Math.max(.1,rs*cl.r),0,Math.PI*2);
         }
         _gbcCtx.fill();
       }
@@ -790,22 +792,34 @@ class BallManager {
 
   drop(mouseX, type) {
     const a=ANIMALS[type];
-    const x=Phaser.Math.Clamp(mouseX, a.r+4*SCALE_FACTOR, W-a.r-4*SCALE_FACTOR);
+    const x=Phaser.Math.Clamp(mouseX, a.r+1, W-a.r-1);
     playDropSound(); vibrate(5);
     return this.spawn(x, GAME_OVER_LINE-a.r, type, 0.3);
   }
 
   spawn(x, y, type, scale=0.6) {
     const a=ANIMALS[type];
-    const body=this.scene.matter.add.circle(x,y,a.r,{
-      restitution:.18,friction:.35,frictionStatic:.40,frictionAir:.012,density:.0025,slop:.01,label:'ball'
+    // Physikalisch korrekte Dichte: größere Bälle sind schwerer, aber nicht überproportional
+    const density = 0.002 + (type/9)*0.003;
+    // Elastizität nimmt mit Größe ab (kleine Bälle hüpfen mehr)
+    const restitution = 0.28 - (type/9)*0.22;
+    // Reibung: mittel, damit Bälle nicht endlos rollen aber auch nicht kleben
+    const body=this.scene.matter.add.circle(x, y, a.r, {
+      restitution,
+      friction: 0.08,
+      frictionStatic: 0.05,
+      frictionAir: 0.008,
+      density,
+      slop: 0,
+      label: 'ball',
+      sleepThreshold: 120,
+      inertia: Infinity, // keine Rotation → kein Ecken-Verhaken
     });
     body._type=type; body._merged=false; body._spawnTime=Date.now();
 
     const texKey=`ball_${type}`;
     if (!this.scene.textures.exists(texKey)) this._makeTexture(texKey,a);
-
-    const sprite=this.scene.add.image(0,0,texKey).setDisplaySize(a.r*2+4,a.r*2+4);
+    const sprite=this.scene.add.image(0,0,texKey).setDisplaySize(a.r*2,a.r*2);
     const label=this.scene.add.text(0,1,a.emoji,{fontSize:Math.floor(a.r*1.4)+'px',fontFamily:'serif'}).setOrigin(.5,.5);
     const container=this.scene.add.container(x,y,[sprite,label]).setDepth(1).setScale(scale);
     this.balls.push({body,container,_scale:scale});
@@ -814,17 +828,37 @@ class BallManager {
 
   _makeTexture(texKey, a) {
     const dpr=Math.min(window.devicePixelRatio||1,2), r=Math.max(4,a.r);
-    const size=Math.ceil(r*2+6)*dpr;
+    const size=Math.ceil(r*2)*dpr;
     const oc=document.createElement('canvas'); oc.width=oc.height=size;
     const c=oc.getContext('2d'); c.scale(dpr,dpr);
-    const cx=size/dpr/2, bw=Math.max(.5,Math.min(r*.09,r*.25));
-    c.shadowColor='rgba(0,0,0,.28)'; c.shadowBlur=r*.25;
-    c.fillStyle=`rgb(${(a.color>>16)&0xff},${(a.color>>8)&0xff},${a.color&0xff})`;
-    c.beginPath(); c.arc(cx,cx,Math.max(1,r-.5),0,Math.PI*2); c.fill();
-    c.shadowBlur=0;
+    const cx=r, bw=Math.max(.5,Math.min(r*.09,r*.25));
+    const cr=(a.color>>16)&0xff, cg=(a.color>>8)&0xff, cb=a.color&0xff;
+
+    // base fill
+    c.fillStyle=`rgb(${cr},${cg},${cb})`;
+    c.beginPath(); c.arc(cx,cx,r,0,Math.PI*2); c.fill();
+
+    // inner gradient: light top-left to dark bottom-right
+    const grad=c.createRadialGradient(cx-r*.28,cx-r*.28,r*.05,cx,cx,r);
+    grad.addColorStop(0,'rgba(255,255,255,.30)');
+    grad.addColorStop(0.5,'rgba(255,255,255,.03)');
+    grad.addColorStop(1,'rgba(0,0,0,.20)');
+    c.fillStyle=grad;
+    c.beginPath(); c.arc(cx,cx,r,0,Math.PI*2); c.fill();
+
+    // specular highlight
+    const spec=c.createRadialGradient(cx-r*.28,cx-r*.30,0,cx-r*.28,cx-r*.30,r*.40);
+    spec.addColorStop(0,'rgba(255,255,255,.50)');
+    spec.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=spec;
+    c.beginPath(); c.arc(cx,cx,r,0,Math.PI*2); c.fill();
+
+    // border drawn inside the circle so it doesn't add width outside
     const bc=_borderColor(a.color);
-    c.strokeStyle=`rgba(${(bc>>16)&0xff},${(bc>>8)&0xff},${bc&0xff},.88)`;
-    c.lineWidth=bw; c.beginPath(); c.arc(cx,cx,Math.max(.5,r-.5-bw*.5),0,Math.PI*2); c.stroke();
+    c.strokeStyle=`rgba(${(bc>>16)&0xff},${(bc>>8)&0xff},${bc&0xff},.72)`;
+    c.lineWidth=bw*2; c.beginPath(); c.arc(cx,cx,r-bw*.5,0,Math.PI*2);
+    c.save(); c.clip(); c.stroke(); c.restore();
+
     this.scene.textures.addCanvas(texKey,oc);
   }
 
@@ -840,7 +874,16 @@ class BallManager {
     for (const b of this.balls) {
       if (!b.body) continue;
       b._scale=Math.min(1,b._scale+.05*dt);
-      b.container.setPosition(b.body.position.x,b.body.position.y).setScale(b._scale).setRotation(b.body.angle);
+      const r=ANIMALS[b.body._type].r;
+      let px=b.body.position.x, py=b.body.position.y;
+      if (px-r < 0)   { px=r;   this.scene.matter.body.setPosition(b.body,{x:px,y:py}); this.scene.matter.body.setVelocity(b.body,{x:0,y:b.body.velocity.y}); }
+      if (px+r > W)   { px=W-r; this.scene.matter.body.setPosition(b.body,{x:px,y:py}); this.scene.matter.body.setVelocity(b.body,{x:0,y:b.body.velocity.y}); }
+      if (py+r > H)   { py=H-r; this.scene.matter.body.setPosition(b.body,{x:px,y:py}); this.scene.matter.body.setVelocity(b.body,{x:b.body.velocity.x*0.5,y:0}); }
+      b.container.setPosition(px,py).setScale(b._scale);
+      const vx=b.body.velocity.x, vy=b.body.velocity.y;
+      if (Math.abs(vx)<0.08 && Math.abs(vy)<0.08) {
+        this.scene.matter.body.setVelocity(b.body,{x:0,y:0});
+      }
     }
     updateMusicTempo(this.balls);
   }
@@ -862,7 +905,7 @@ class BallManager {
       const texKey=`ball_${type}`;
       if (!this.scene.textures.exists(texKey)) this._makeTexture(texKey,a);
       const [sprite,label]=b.container.list;
-      sprite?.setTexture(texKey).setDisplaySize(a.r*2+4,a.r*2+4);
+      sprite?.setTexture(texKey).setDisplaySize(a.r*2,a.r*2);
       label?.setText(a.emoji).setFontSize(Math.floor(a.r*1.4)+'px');
     }
   }
@@ -944,11 +987,12 @@ class GameScene extends Phaser.Scene {
     this._warningActive=false; this._lastWarnShake=0;
     drawPreview(this.nextType); updateScore(0);
 
-    this.matter.world.setGravity(0,1.8);
-    const wOpts={isStatic:true,friction:0,frictionStatic:0,restitution:.05};
-    this.matter.add.rectangle(W/2,H+30*SCALE_FACTOR,W+200*SCALE_FACTOR,60*SCALE_FACTOR,{...wOpts,friction:.4,frictionStatic:.6});
-    this.matter.add.rectangle(-28*SCALE_FACTOR,H/2,56*SCALE_FACTOR,H*3,wOpts);
-    this.matter.add.rectangle(W+28*SCALE_FACTOR,H/2,56*SCALE_FACTOR,H*3,wOpts);
+    this.matter.world.setGravity(0,1.4);
+    const WALL=120;
+    const wOpts={isStatic:true,friction:.35,frictionStatic:.5,restitution:.02,slop:0,label:'wall'};
+    this.matter.add.rectangle(W/2,H+WALL/2-2,W+WALL*2,WALL,{...wOpts,friction:.45,frictionStatic:.6});
+    this.matter.add.rectangle(-WALL/2,H/2,WALL,H*3,wOpts);
+    this.matter.add.rectangle(W+WALL/2,H/2,WALL,H*3,wOpts);
 
     this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
     this.ballMgr=new BallManager(this);
@@ -1005,7 +1049,7 @@ class GameScene extends Phaser.Scene {
     this.ballMgr.drop(this.mouseX,this.currentType);
     this.currentType=this.nextType; this.nextType=randNext();
     drawPreview(this.nextType); this.canDrop=false;
-    this.time.delayedCall(380,()=>{this.canDrop=true;});
+    this.time.delayedCall(480,()=>{this.canDrop=true;});
   }
 
   _initCollisions() {
@@ -1018,12 +1062,15 @@ class GameScene extends Phaser.Scene {
         const nt=bodyA._type+1;
         const mx=(bodyA.position.x+bodyB.position.x)/2, my=(bodyA.position.y+bodyB.position.y)/2;
         const vx=(bodyA.velocity.x+bodyB.velocity.x)*.25, vy=(bodyA.velocity.y+bodyB.velocity.y)*.25;
-        this.time.delayedCall(16,()=>{
+        this.time.delayedCall(20,()=>{
           this.ballMgr.resetDanger();
           this.effects.spawnMerge(mx,my,nt);
           this.ballMgr.remove(bodyA); this.ballMgr.remove(bodyB);
           const nb=this.ballMgr.spawn(mx,my,nt);
-          this.matter.body.setVelocity(nb,{x:vx*.5,y:Math.max(vy,2.5)});
+          // Sanfte Anfangsgeschwindigkeit nach Merge, nach unten gerichtet
+          const mvx = (bodyA.velocity.x+bodyB.velocity.x)*0.15;
+          const mvy = Math.max((bodyA.velocity.y+bodyB.velocity.y)*0.15, 1.5);
+          this.matter.body.setVelocity(nb,{x:mvx, y:mvy});
           this.score+=(nt+1)*2; updateScore(this.score);
           flashMergeCell(nt);
           if (nt===ANIMALS.length-1) this.time.delayedCall(400,()=>this._showWin());
@@ -1057,7 +1104,7 @@ class GameScene extends Phaser.Scene {
     // Guide-Linie
     this.guideGfx.clear();
     if (!this.gameOver) {
-      const a=ANIMALS[this.currentType], x=Phaser.Math.Clamp(this.mouseX,a.r+4*SCALE_FACTOR,W-a.r-4*SCALE_FACTOR);
+      const a=ANIMALS[this.currentType], x=Phaser.Math.Clamp(this.mouseX,a.r+1,W-a.r-1);
       this.guideGfx.lineStyle(1*SCALE_FACTOR,0xffffff,.18);
       this._dashedLine(this.guideGfx,x,GAME_OVER_LINE,x,H,6*SCALE_FACTOR,5*SCALE_FACTOR);
     }
@@ -1077,8 +1124,7 @@ class GameScene extends Phaser.Scene {
     // Preview-Ball
     this.previewGfx.clear();
     if (!this.gameOver) {
-      const a=ANIMALS[this.currentType], x=Phaser.Math.Clamp(this.mouseX,a.r+4*SCALE_FACTOR,W-a.r-4*SCALE_FACTOR), y=GAME_OVER_LINE-a.r;
-      this.previewGfx.fillStyle(0x000000,.12).fillEllipse(x,y+a.r+3*SCALE_FACTOR,a.r*1.8,a.r*.32);
+      const a=ANIMALS[this.currentType], x=Phaser.Math.Clamp(this.mouseX,a.r+1,W-a.r-1), y=GAME_OVER_LINE-a.r;
       this.previewGfx.fillStyle(a.color,.92).fillCircle(x,y,a.r);
       const bw=Math.max(2,a.r*.09);
       this.previewGfx.lineStyle(bw,_borderColor(a.color),.85).strokeCircle(x,y,a.r-bw*.5);
@@ -1163,7 +1209,7 @@ function startGameAfterUserTap() {
     backgroundColor:0x00000000,transparent:true,
     parent:'phaser-container',
     fps:{target:60,forceSetTimeOut:false,smoothStep:true},
-    physics:{default:'matter',matter:{gravity:{y:1.8},debug:false,enableSleeping:false,positionIterations:12,velocityIterations:10,constraintIterations:4}},
+    physics:{default:'matter',matter:{gravity:{y:2.0},debug:false,enableSleeping:true,positionIterations:20,velocityIterations:16,constraintIterations:4,sleepThreshold:120}},
     scene:[GameScene],
   });
 }
